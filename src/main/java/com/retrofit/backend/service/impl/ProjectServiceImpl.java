@@ -25,8 +25,30 @@ public class ProjectServiceImpl implements ProjectService {
     private final UserRepository userRepository;
 
     @Override
-    public Page<ProjectResponseDto> getAllProjects(Pageable pageable) {
-        return projectRepository.findAll(pageable)
+    public Page<ProjectResponseDto> getAllProjects(String search, String priorityStr, String statusStr, Pageable pageable) {
+
+        ProjectPriority priority = null;
+        if (priorityStr != null && !priorityStr.trim().isEmpty()) {
+            try {
+                priority = ProjectPriority.valueOf(priorityStr.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                // Ignorado
+            }
+        }
+
+        ProjectStatus status = null;
+        if (statusStr != null && !statusStr.trim().isEmpty()) {
+            try {
+                status = ProjectStatus.valueOf(statusStr.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                // Ignorado
+            }
+        }
+
+
+        String finalSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : "";
+
+        return projectRepository.findWithFilters(finalSearch, priority, status, pageable)
                 .map(this::convertToDto);
     }
 
