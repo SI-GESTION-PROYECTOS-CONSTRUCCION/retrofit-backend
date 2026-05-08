@@ -65,15 +65,30 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     @Transactional
     public ProjectResponseDto updateProject(Long id, ProjectRequestDto dto) {
+        // 1. Buscamos el proyecto a actualizar
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+        // 2. Validamos que si el usuario cambió el código, el nuevo código no le pertenezca a OTRO proyecto
+        projectRepository.findByCode(dto.getCode())
+                .ifPresent(existingProject -> {
+                    if (!existingProject.getId().equals(id)) {
+                        // Usamos exactamente el mismo mensaje que en crear,
+                        // para que el GlobalExceptionHandler pinte el error en el frontend de forma mágica.
+                        throw new IllegalArgumentException("Project code already exists");
+                    }
+                });
+
+        // 3. Guardamos los datos
         return saveProjectFromDto(project, dto);
     }
 
     @Override
+    @Transactional
     public void deleteProject(Long id) {
-        if(!projectRepository.existsById(id))
+        if(!projectRepository.existsById(id)) {
             throw new ResourceNotFoundException("Project not found");
+        }
         projectRepository.deleteById(id);
     }
 
@@ -128,6 +143,7 @@ public class ProjectServiceImpl implements ProjectService {
         dto.setPriority(project.getPriority().name());
         dto.setCurrentProgress(project.getCurrentProgress());
         if(project.getManager() != null) {
+            dto.setManagerId(project.getManager().getId());
             dto.setManagerFullName(project.getManager().getName() + " " + project.getManager().getLastName());
         }
         return dto;

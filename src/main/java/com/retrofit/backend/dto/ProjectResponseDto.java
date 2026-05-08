@@ -16,5 +16,6 @@ public class ProjectResponseDto {
     private String status;
     private String priority;
     private Double currentProgress;
+    private Long managerId;
     private String managerFullName;
 }
