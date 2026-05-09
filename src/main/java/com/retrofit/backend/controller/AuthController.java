@@ -16,25 +16,20 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
+import java.util.List;
 
 @RestController
 @RequestMapping("/auth")
-
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService authService;
     private final UserService userService;
     private final UserRepository userRepository;
+
     @PostMapping("/registerAdmin")
     public ResponseEntity<UserDTO> register(@RequestBody AdminDTO request){
         return ResponseEntity.ok(userService.registerAdmin(request));
-    }
-
-    @PostMapping("/registerUser")
-    public ResponseEntity<UserDTO> register(@RequestBody UserCreateDTO request){
-        return ResponseEntity.ok(userService.registerUser(request));
     }
 
     @GetMapping("/profile")

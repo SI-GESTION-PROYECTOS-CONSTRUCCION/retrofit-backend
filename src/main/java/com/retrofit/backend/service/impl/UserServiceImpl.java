@@ -13,6 +13,9 @@ import com.retrofit.backend.service.UserService;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -31,7 +34,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDTO registerAdmin(AdminDTO admin) {
         if(adminRepository.findByEmail(admin.getEmail()).isPresent()){
-            throw new EntityExistsException("User with this dni already exists");
+            throw new EntityExistsException("El email ya esta registrado");
         };
 
         RoleE adminRole = roleRepository.findByName("ADMIN")
@@ -54,25 +57,40 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDTO registerUser(UserCreateDTO dto) {
-        if(userRepository.findByUsername(dto.getUsername()).isPresent()){
-            throw new EntityExistsException("El username ya existe");
-        }
+
         RoleE roleEntity = roleRepository.findByName(dto.getRole())
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado: " + dto.getRole()));
+
+        if(userRepository.findByUsername(dto.getUsername()).isPresent()){
+            throw new EntityExistsException("El username ya esta registrado");
+        }
+
+        if(userRepository.findByEmail(dto.getEmail()).isPresent()){
+            throw new EntityExistsException("El email ya esta registrado");
+        }
+
         User userToSave;
         switch (dto.getRole()) {
             case "ADMIN":
                 userToSave = Admin.builder().build();
                 break;
 
+            case "INGENIERO_RESIDENTE":
+                userToSave = new User();
+                break;
+
+            case "ALMACENERO":
+                userToSave = new User();
+                break;
+
             default:
-                throw new IllegalArgumentException("Tipo de rol no soportado para registro");
+                throw new IllegalArgumentException("El rol " + dto.getRole() + " no tiene una entidad asociada.");
         }
 
         userToSave.setEmail(dto.getEmail());
         userToSave.setName(dto.getName());
+        userToSave.setUsername(dto.getUsername());
         userToSave.setLastName(dto.getLastName());
-        userToSave.setSex(dto.getSex());
         userToSave.setPassword(passwordEncoder.encode(dto.getPassword()));
         userToSave.setRole(roleEntity);
         userToSave.setCreatedAt(Timestamp.valueOf(LocalDateTime.now()));
@@ -99,31 +117,42 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDTO updateUser(long id, UserCreateDTO dto) {
-
         User userFound = userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con ID: " + id));
 
-        if (dto.getUsername() != null && !dto.getUsername().isEmpty()) {
+        if (dto.getUsername() != null && !dto.getUsername().isBlank()) {
             if (!userFound.getUsername().equals(dto.getUsername())) {
                 if (userRepository.findByUsername(dto.getUsername()).isPresent()) {
-                    throw new EntityExistsException("Ya existe otro usuario con el usuario: " + dto.getUsername());
+                    throw new EntityExistsException("El nombre de usuario '" + dto.getUsername() + "' ya está en uso.");
                 }
-                userFound.setEmail(dto.getEmail());
+                userFound.setUsername(dto.getUsername());
             }
         }
 
+        if (dto.getEmail() != null && !dto.getEmail().isBlank()) userFound.setEmail(dto.getEmail());
+        if (dto.getName() != null && !dto.getName().isBlank()) userFound.setName(dto.getName());
+        if (dto.getLastName() != null && !dto.getLastName().isBlank()) userFound.setLastName(dto.getLastName());
+        if (dto.getPassword() != null && !dto.getPassword().isBlank()) userFound.setPassword(passwordEncoder.encode(dto.getPassword()));
+        // Solo los usuarios ADMIN pueden cambiar a otro usuario a ADMIN
+        if (dto.getRole() != null && !dto.getRole().isBlank()) {
+            RoleE newRole = roleRepository.findByName(dto.getRole())
+                    .orElseThrow(() -> new EntityNotFoundException("El rol '" + dto.getRole() + "' no existe."));
 
-        if (dto.getName() != null) userFound.setName(dto.getName());
-        if (dto.getLastName() != null) userFound.setLastName(dto.getLastName());
-        if (dto.getSex() != null) userFound.setSex(dto.getSex());
+            if (newRole.getName().equals("ADMIN")) {
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                boolean isAdmin = auth.getAuthorities().stream()
+                        .anyMatch(a -> a.getAuthority().equals("ADMIN"));
 
+                if (!isAdmin) {
+                    throw new AccessDeniedException("No tienes permisos para asignar el rol de ADMINISTRADOR.");
+                }
+            }
 
-        if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
-            userFound.setPassword(passwordEncoder.encode(dto.getPassword()));
+            userFound.setRole(newRole);
         }
 
-
         userFound.setUpdatedAt(Timestamp.valueOf(LocalDateTime.now()));
+
         return mapToDTO(userRepository.save(userFound));
     }
 
@@ -150,7 +179,6 @@ public class UserServiceImpl implements UserService {
                 .name(user.getName())
                 .username(user.getUsername())
                 .lastName(user.getLastName())
-                .sex(user.getSex())
                 .role(user.getRole().getName())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())

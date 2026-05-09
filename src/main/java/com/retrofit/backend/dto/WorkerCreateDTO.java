@@ -9,11 +9,20 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserCreateDTO {
-    private String email;
+public class WorkerCreateDTO {
+    // Datos del trabajador
+    private String position;
+    private String dni;
+    private String phone;
+
+    // Para crear un User si es necesario
     private String name;
     private String username;
     private String lastName;
+    private String email;
+
+    // Datos de la cuenta
+    private Boolean createAccount;
     private String password;
     private String role;
 }
