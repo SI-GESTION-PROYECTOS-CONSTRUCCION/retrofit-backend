@@ -33,14 +33,14 @@ public class User {
     @Column(unique = false)
     private String lastName;
 
-    @Column(unique = false)
-    private String sex;
-
     @Column(unique = true)
     private String username;
 
     @Column(unique = true)
     private String email;
+
+    @Column(unique = false, columnDefinition = "boolean default true")
+    private boolean active;
 
     @Column(unique = false)
     private Timestamp createdAt;

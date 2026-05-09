@@ -1,4 +1,133 @@
 package com.retrofit.backend.service.impl;
 
-public class WorkerServiceImpl {
+import com.retrofit.backend.dto.UserCreateDTO;
+import com.retrofit.backend.dto.UserDTO;
+import com.retrofit.backend.dto.WorkerCreateDTO;
+import com.retrofit.backend.dto.WorkerDTO;
+import com.retrofit.backend.model.User;
+import com.retrofit.backend.model.Worker;
+import com.retrofit.backend.repository.UserRepository;
+import com.retrofit.backend.repository.WorkerRepository;
+import com.retrofit.backend.service.UserService;
+import com.retrofit.backend.service.WorkerService;
+import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class WorkerServiceImpl implements WorkerService {
+    private final WorkerRepository workerRepository;
+    private final UserRepository userRepository;
+    private final UserService userService;
+
+
+    @Override
+    @Transactional
+    public WorkerDTO createWorker(WorkerCreateDTO dto) {
+        User userAccount = null;
+
+        // Si el worker tambien es usuario, se crea su cuenta, con dni como username por defecto
+        if (dto.getCreateAccount() != null && dto.getCreateAccount()){
+            String generatedUsername = (dto.getUsername() != null && !dto.getUsername().isBlank())
+                    ? dto.getUsername()
+                    : dto.getDni();
+
+            UserCreateDTO userDto = UserCreateDTO.builder()
+                    .username(generatedUsername)
+                    .email(dto.getEmail())
+                    .password(dto.getPassword())
+                    .name(dto.getName())
+                    .lastName(dto.getLastName())
+                    .role(dto.getRole())
+                    .build();
+
+            UserDTO savedUser = userService.registerUser(userDto);
+            userAccount = userRepository.findById(savedUser.getId()).orElse(null);
+        }
+
+        Worker worker = Worker.builder()
+                .user(userAccount)
+                .position(dto.getPosition())
+                .dni(dto.getDni())
+                .phone(dto.getPhone())
+                .active(true)
+                .createdAt(Timestamp.valueOf(LocalDateTime.now()))
+                .build();
+
+        return mapToDTO(workerRepository.save(worker));
+    }
+
+    @Override
+    @Transactional
+    public WorkerDTO updateWorker(Long id, WorkerCreateDTO dto) {
+        Worker worker = workerRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Trabajador no encontrado"));
+
+        if (dto.getPosition() != null) worker.setPosition(dto.getPosition());
+        if (dto.getPhone() != null) worker.setPhone(dto.getPhone());
+        worker.setUpdatedAt(Timestamp.valueOf(LocalDateTime.now()));
+        worker = workerRepository.saveAndFlush(worker);
+
+        if (worker.getUser() != null) {
+            User user = worker.getUser();
+            if (dto.getName() != null) user.setName(dto.getName());
+            if (dto.getLastName() != null) user.setLastName(dto.getLastName());
+            if (dto.getEmail() != null) user.setEmail(dto.getEmail());
+
+            userRepository.saveAndFlush(user); // Guardado explícito del usuario
+        }
+
+        return mapToDTO(worker);
+    }
+
+    @Override
+    public WorkerDTO getWorkerById(Long id) {
+        return workerRepository.findById(id)
+                .map(this::mapToDTO)
+                .orElseThrow(() -> new EntityNotFoundException("Trabajador no encontrado"));
+    }
+
+    @Override
+    public List<WorkerDTO> getAllWorkers() {
+        return workerRepository.findAll().stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public void deleteWorker(Long id) {
+        Worker worker = workerRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Trabajador no encontrado"));
+        worker.setActive(false);
+        workerRepository.save(worker);
+    }
+
+    private WorkerDTO mapToDTO(Worker worker) {
+        WorkerDTO.WorkerDTOBuilder builder = WorkerDTO.builder()
+                .id(worker.getId())
+                .dni(worker.getDni())
+                .position(worker.getPosition())
+                .phone(worker.getPhone())
+                .active(worker.isActive());
+
+        if (worker.getUser() != null && worker.getUser().getRole() != null) {
+            builder.username(worker.getUser().getUsername())
+                    .fullName(worker.getUser().getName() + " " + worker.getUser().getLastName())
+                    .email(worker.getUser().getEmail())
+                    .roleName(worker.getUser().getRole().getName())
+                    .hasAccessAccount(true);
+        } else {
+            builder.fullName("Personal sin cuenta")
+                    .hasAccessAccount(false);
+        }
+
+        return builder.build();
+    }
 }
