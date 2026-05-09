@@ -32,6 +32,7 @@ public class Worker {
     @Column(unique = true)
     private String phone;
 
+    @Column(unique = false, columnDefinition = "boolean default true")
     private boolean active;
 
     private Timestamp createdAt;
