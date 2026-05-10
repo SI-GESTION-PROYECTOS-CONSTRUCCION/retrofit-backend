@@ -24,6 +24,12 @@ public class Worker {
     @JoinColumn(name = "usuario_id", referencedColumnName = "id")
     private User user;
 
+    private String name;
+    private String lastName;
+
+    @Column(unique = true, nullable = true)
+    private String email;
+
     private String position;
 
     @Column(unique = true, length = 8)

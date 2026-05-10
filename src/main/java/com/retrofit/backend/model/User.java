@@ -39,7 +39,7 @@ public class User {
     @Column(unique = true)
     private String email;
 
-    @Column(unique = false, columnDefinition = "boolean default true")
+    @Column(unique = false)
     private boolean active;
 
     @Column(unique = false)

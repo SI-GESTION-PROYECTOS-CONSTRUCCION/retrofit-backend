@@ -47,6 +47,7 @@ public class UserServiceImpl implements UserService {
                 .role(adminRole)
                 .username(admin.getUsername())
                 .name(admin.getName())
+                .active(true)
                 .createdAt(Timestamp.valueOf(LocalDateTime.now()))
                 .build();
 
@@ -93,6 +94,7 @@ public class UserServiceImpl implements UserService {
         userToSave.setLastName(dto.getLastName());
         userToSave.setPassword(passwordEncoder.encode(dto.getPassword()));
         userToSave.setRole(roleEntity);
+        userToSave.setActive(true);
         userToSave.setCreatedAt(Timestamp.valueOf(LocalDateTime.now()));
 
         User savedUser = userRepository.save(userToSave);
@@ -158,10 +160,11 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void deleteUser(long id) {
-        if (!userRepository.existsById(id)) {
-            throw new EntityNotFoundException("Usuario no encontrado con ID: " + id);
-        }
-        userRepository.deleteById(id);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
+
+        user.setActive(false);
+        userRepository.save(user);
     }
 
     @Override

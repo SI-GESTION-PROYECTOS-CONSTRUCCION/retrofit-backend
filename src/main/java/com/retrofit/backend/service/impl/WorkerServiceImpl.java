@@ -33,8 +33,12 @@ public class WorkerServiceImpl implements WorkerService {
     public WorkerDTO createWorker(WorkerCreateDTO dto) {
         User userAccount = null;
 
-        // Si el worker tambien es usuario, se crea su cuenta, con dni como username por defecto
-        if (dto.getCreateAccount() != null && dto.getCreateAccount()){
+        if (dto.getCreateAccount() != null && dto.getCreateAccount()) {
+            if (dto.getEmail() == null || dto.getEmail().isBlank()) {
+                throw new IllegalArgumentException("El email es obligatorio para crear una cuenta de usuario.");
+            }
+
+            // Lógica de creación de cuenta (Username = DNI si no viene uno)
             String generatedUsername = (dto.getUsername() != null && !dto.getUsername().isBlank())
                     ? dto.getUsername()
                     : dto.getDni();
@@ -52,8 +56,12 @@ public class WorkerServiceImpl implements WorkerService {
             userAccount = userRepository.findById(savedUser.getId()).orElse(null);
         }
 
+        // El worker se crea con los datos que vengan (el email puede ser null)
         Worker worker = Worker.builder()
                 .user(userAccount)
+                .name(dto.getName())
+                .lastName(dto.getLastName())
+                .email(dto.getEmail())
                 .position(dto.getPosition())
                 .dni(dto.getDni())
                 .phone(dto.getPhone())
@@ -81,7 +89,7 @@ public class WorkerServiceImpl implements WorkerService {
             if (dto.getLastName() != null) user.setLastName(dto.getLastName());
             if (dto.getEmail() != null) user.setEmail(dto.getEmail());
 
-            userRepository.saveAndFlush(user); // Guardado explícito del usuario
+            userRepository.saveAndFlush(user);
         }
 
         return mapToDTO(worker);
@@ -115,17 +123,16 @@ public class WorkerServiceImpl implements WorkerService {
                 .dni(worker.getDni())
                 .position(worker.getPosition())
                 .phone(worker.getPhone())
-                .active(worker.isActive());
+                .active(worker.isActive())
+                .fullName(worker.getName() + " "  + worker.getLastName());
 
         if (worker.getUser() != null && worker.getUser().getRole() != null) {
             builder.username(worker.getUser().getUsername())
-                    .fullName(worker.getUser().getName() + " " + worker.getUser().getLastName())
                     .email(worker.getUser().getEmail())
                     .roleName(worker.getUser().getRole().getName())
                     .hasAccessAccount(true);
         } else {
-            builder.fullName("Personal sin cuenta")
-                    .hasAccessAccount(false);
+            builder.hasAccessAccount(false);
         }
 
         return builder.build();
