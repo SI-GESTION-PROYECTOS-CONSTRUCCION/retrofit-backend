@@ -10,6 +10,8 @@ import com.retrofit.backend.repository.ProjectRepository;
 import com.retrofit.backend.repository.WorkerRepository;
 import com.retrofit.backend.service.ProjectAssignmentService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
@@ -43,8 +45,16 @@ public class ProjectAssignmentServiceImpl implements ProjectAssignmentService {
     }
 
     @Override
-    public List<ProjectAssignmentDTO> getWorkersByProject(Long projectId) {
-        return assignmentRepository.findByProjectIdAndActiveTrue(projectId).stream()
+    public Page<ProjectAssignmentDTO> getWorkersByProject(Long projectId, String search, Pageable pageable) {
+        String finalSearch = (search == null) ? "" : search.trim();
+        return assignmentRepository.findActiveAssignments(projectId, finalSearch, pageable)
+                .map(this::mapToDTO);
+    }
+
+    @Override
+    public List<ProjectAssignmentDTO> getActiveAssignments() {
+        return assignmentRepository.findByActiveTrue()
+                .stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
@@ -64,9 +74,7 @@ public class ProjectAssignmentServiceImpl implements ProjectAssignmentService {
                 .projectId(assignment.getProject().getId())
                 .projectName(assignment.getProject().getName())
                 .workerId(assignment.getWorker().getId())
-                .workerName(assignment.getWorker().getUser() != null ?
-                        assignment.getWorker().getUser().getName() + " " + assignment.getWorker().getUser().getLastName() :
-                        "Personal externo")
+                .workerName(assignment.getWorker().getName() + " " + assignment.getWorker().getLastName())
                 .position(assignment.getWorker().getPosition())
                 .assignedAt(assignment.getAssignedAt())
                 .active(assignment.isActive())

@@ -12,7 +12,8 @@ public class WorkerDTO {
     private String phone;
     private boolean active;
     private String username;
-    private String fullName;
+    private String name;
+    private String lastName;
     private String email;
     private String roleName;
     private boolean hasAccessAccount;

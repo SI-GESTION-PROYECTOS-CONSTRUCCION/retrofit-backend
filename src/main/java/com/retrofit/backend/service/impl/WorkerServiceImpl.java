@@ -12,6 +12,8 @@ import com.retrofit.backend.service.UserService;
 import com.retrofit.backend.service.WorkerService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,14 @@ public class WorkerServiceImpl implements WorkerService {
     @Override
     @Transactional
     public WorkerDTO createWorker(WorkerCreateDTO dto) {
+
+        if (workerRepository.existsByDni(dto.getDni())) {
+            throw new IllegalArgumentException("Worker DNI already exists");
+        }
+        if (dto.getPhone() != null && !dto.getPhone().isBlank() && workerRepository.existsByPhone(dto.getPhone())) {
+            throw new IllegalArgumentException("Worker phone already exists");
+        }
+
         User userAccount = null;
 
         if (dto.getCreateAccount() != null && dto.getCreateAccount()) {
@@ -78,8 +88,26 @@ public class WorkerServiceImpl implements WorkerService {
         Worker worker = workerRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Trabajador no encontrado"));
 
+        if (dto.getDni() != null && !dto.getDni().isBlank() && !dto.getDni().equals(worker.getDni())) {
+            if (workerRepository.existsByDni(dto.getDni())) {
+                throw new IllegalArgumentException("Worker DNI already exists");
+            }
+            worker.setDni(dto.getDni());
+        }
+
+        if (dto.getPhone() != null && !dto.getPhone().isBlank() && !dto.getPhone().equals(worker.getPhone())) {
+            if (workerRepository.existsByPhone(dto.getPhone())) {
+                throw new IllegalArgumentException("Worker phone already exists");
+            }
+            worker.setPhone(dto.getPhone());
+        }
+
+        if (dto.getName() != null) worker.setName(dto.getName());
+        if (dto.getLastName() != null) worker.setLastName(dto.getLastName());
+        if (dto.getDni() != null) worker.setDni(dto.getDni());
         if (dto.getPosition() != null) worker.setPosition(dto.getPosition());
         if (dto.getPhone() != null) worker.setPhone(dto.getPhone());
+
         worker.setUpdatedAt(Timestamp.valueOf(LocalDateTime.now()));
         worker = workerRepository.saveAndFlush(worker);
 
@@ -91,7 +119,6 @@ public class WorkerServiceImpl implements WorkerService {
 
             userRepository.saveAndFlush(user);
         }
-
         return mapToDTO(worker);
     }
 
@@ -103,8 +130,15 @@ public class WorkerServiceImpl implements WorkerService {
     }
 
     @Override
-    public List<WorkerDTO> getAllWorkers() {
-        return workerRepository.findAll().stream()
+    public Page<WorkerDTO> getAllWorkers(String search, Pageable pageable) {
+        String finalSearch = (search == null) ? "" : search.trim();
+        return workerRepository.findWithFilters(finalSearch, pageable)
+                .map(this::mapToDTO);
+    }
+
+    @Override
+    public List<WorkerDTO> getAvailableWorkers() {
+        return workerRepository.findAvailableWorkers().stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
@@ -124,7 +158,8 @@ public class WorkerServiceImpl implements WorkerService {
                 .position(worker.getPosition())
                 .phone(worker.getPhone())
                 .active(worker.isActive())
-                .fullName(worker.getName() + " "  + worker.getLastName());
+                .name(worker.getName())
+                .lastName(worker.getLastName());
 
         if (worker.getUser() != null && worker.getUser().getRole() != null) {
             builder.username(worker.getUser().getUsername())
