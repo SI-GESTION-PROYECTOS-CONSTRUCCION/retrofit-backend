@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 public interface ProjectService {
     Page<ProjectResponseDto> getAllProjects(String search, String priorityStr, String statusStr, Pageable pageable);
     ProjectResponseDto getProjectById(Long id);
+    ProjectResponseDto getProjectByCode(String code);
     ProjectResponseDto createProject(ProjectRequestDto dto);
     ProjectResponseDto updateProject(Long id, ProjectRequestDto dto);
     void deleteProject(Long id);
