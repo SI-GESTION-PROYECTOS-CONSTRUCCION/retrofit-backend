@@ -62,6 +62,11 @@ public class ProjectController {
         return ResponseEntity.ok(projectService.getProjectById(id));
     }
 
+    @GetMapping("/code/{code}")
+    public ResponseEntity<ProjectResponseDto> getByCode(@PathVariable String code) {
+        return ResponseEntity.ok(projectService.getProjectByCode(code));
+    }
+
     @PostMapping
     public ResponseEntity<ProjectResponseDto> create(@Valid @RequestBody ProjectRequestDto dto) {
         return new ResponseEntity<>(projectService.createProject(dto), HttpStatus.CREATED);

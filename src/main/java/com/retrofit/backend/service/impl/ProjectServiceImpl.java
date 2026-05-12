@@ -99,6 +99,13 @@ public class ProjectServiceImpl implements ProjectService {
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
     }
 
+    @Override
+    public ProjectResponseDto getProjectByCode(String code) {
+        return projectRepository.findByCode(code)
+                .map(this::convertToDto)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+    }
+
     private ProjectResponseDto saveProjectFromDto(Project project, ProjectRequestDto dto) {
         project.setCode(dto.getCode());
         project.setName(dto.getName());
@@ -142,6 +149,7 @@ public class ProjectServiceImpl implements ProjectService {
         dto.setStatus(project.getStatus().name());
         dto.setPriority(project.getPriority().name());
         dto.setCurrentProgress(project.getCurrentProgress());
+        dto.setTotalBudget(project.getTotalBudget());
         if(project.getManager() != null) {
             dto.setManagerId(project.getManager().getId());
             dto.setManagerFullName(project.getManager().getName() + " " + project.getManager().getLastName());
