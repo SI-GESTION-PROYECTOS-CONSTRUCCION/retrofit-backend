@@ -59,6 +59,26 @@ public class GlobalExceptionHandler {
         else if (ex.getMessage().contains("Prioridad de proyecto inválida")) {
             body.put("priority", "La prioridad seleccionada no es válida");
         }
+
+        // Workers
+        else if (ex.getMessage().contains("Worker DNI already exists")) {
+            body.put("dni", "Este DNI ya se encuentra registrado.");
+        }
+        else if (ex.getMessage().contains("Worker phone already exists")) {
+            body.put("phone", "Este número de teléfono ya está en uso.");
+        }
+        else if (ex.getMessage().contains("User email is required for account")) {
+            body.put("email", "El correo es obligatorio para crear la cuenta.");
+        }
+
+        // Users
+        else if (ex.getMessage().contains("User username already exists")) {
+            body.put("username", "Este nombre de usuario ya está en uso.");
+        }
+        else if (ex.getMessage().contains("User email already exists")) {
+            body.put("email", "Este correo electrónico ya está registrado.");
+        }
+
         else {
             body.put("general", ex.getMessage());
         }

@@ -9,10 +9,13 @@ import com.retrofit.backend.model.User;
 import com.retrofit.backend.repository.AdminRepository;
 import com.retrofit.backend.repository.RoleRepository;
 import com.retrofit.backend.repository.UserRepository;
+import com.retrofit.backend.repository.WorkerRepository;
 import com.retrofit.backend.service.UserService;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -31,11 +34,12 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RoleRepository roleRepository;
+    private final WorkerRepository workerRepository;
     @Override
     public UserDTO registerAdmin(AdminDTO admin) {
         if(adminRepository.findByEmail(admin.getEmail()).isPresent()){
-            throw new EntityExistsException("El email ya esta registrado");
-        };
+            throw new IllegalArgumentException("User email already exists");
+        }
 
         RoleE adminRole = roleRepository.findByName("ADMIN")
                 .orElseThrow(() -> new RuntimeException("Rol ADMIN no existe en la base de datos"));
@@ -47,6 +51,7 @@ public class UserServiceImpl implements UserService {
                 .role(adminRole)
                 .username(admin.getUsername())
                 .name(admin.getName())
+                .active(true)
                 .createdAt(Timestamp.valueOf(LocalDateTime.now()))
                 .build();
 
@@ -62,11 +67,11 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado: " + dto.getRole()));
 
         if(userRepository.findByUsername(dto.getUsername()).isPresent()){
-            throw new EntityExistsException("El username ya esta registrado");
+            throw new IllegalArgumentException("User username already exists");
         }
 
         if(userRepository.findByEmail(dto.getEmail()).isPresent()){
-            throw new EntityExistsException("El email ya esta registrado");
+            throw new IllegalArgumentException("User email already exists");
         }
 
         User userToSave;
@@ -93,6 +98,7 @@ public class UserServiceImpl implements UserService {
         userToSave.setLastName(dto.getLastName());
         userToSave.setPassword(passwordEncoder.encode(dto.getPassword()));
         userToSave.setRole(roleEntity);
+        userToSave.setActive(true);
         userToSave.setCreatedAt(Timestamp.valueOf(LocalDateTime.now()));
 
         User savedUser = userRepository.save(userToSave);
@@ -100,19 +106,15 @@ public class UserServiceImpl implements UserService {
         return mapToDTO(savedUser);
     }
 
+    // En UserServiceImpl.java
 
     @Override
-    public List<UserDTO> getUsersByRole(String roleName) {
+    public Page<UserDTO> getAllUsers(String search, String roleName, Pageable pageable) {
+        String finalSearch = (search == null) ? "" : search.trim();
+        String finalRole = (roleName == null) ? "ALL" : roleName;
 
-        if (roleName == null || roleName.equals("ALL")) {
-            return userRepository.findAll().stream()
-                    .map(this::mapToDTO)
-                    .collect(Collectors.toList());
-        }
-
-        return userRepository.findByRole_Name(roleName).stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
+        return userRepository.findWithFilters(finalSearch, finalRole, pageable)
+                .map(this::mapToDTO);
     }
 
     @Override
@@ -123,9 +125,18 @@ public class UserServiceImpl implements UserService {
         if (dto.getUsername() != null && !dto.getUsername().isBlank()) {
             if (!userFound.getUsername().equals(dto.getUsername())) {
                 if (userRepository.findByUsername(dto.getUsername()).isPresent()) {
-                    throw new EntityExistsException("El nombre de usuario '" + dto.getUsername() + "' ya está en uso.");
+                    throw new IllegalArgumentException("User username already exists");
                 }
                 userFound.setUsername(dto.getUsername());
+            }
+        }
+
+        if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
+            if (!userFound.getEmail().equals(dto.getEmail())) {
+                if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
+                    throw new IllegalArgumentException("User email already exists");
+                }
+                userFound.setEmail(dto.getEmail());
             }
         }
 
@@ -151,17 +162,24 @@ public class UserServiceImpl implements UserService {
             userFound.setRole(newRole);
         }
 
-        userFound.setUpdatedAt(Timestamp.valueOf(LocalDateTime.now()));
+        workerRepository.findByUser(userFound).ifPresent(worker -> {
+            // Si el nombre o apellido cambiaron en el User, se los pasamos al Worker
+            if (dto.getName() != null && !dto.getName().isBlank()) worker.setName(dto.getName());
+            if (dto.getLastName() != null && !dto.getLastName().isBlank()) worker.setLastName(dto.getLastName());
+            workerRepository.save(worker);
+        });
 
+        userFound.setUpdatedAt(Timestamp.valueOf(LocalDateTime.now()));
         return mapToDTO(userRepository.save(userFound));
     }
 
     @Override
     public void deleteUser(long id) {
-        if (!userRepository.existsById(id)) {
-            throw new EntityNotFoundException("Usuario no encontrado con ID: " + id);
-        }
-        userRepository.deleteById(id);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
+
+        user.setActive(false);
+        userRepository.save(user);
     }
 
     @Override
@@ -180,6 +198,7 @@ public class UserServiceImpl implements UserService {
                 .username(user.getUsername())
                 .lastName(user.getLastName())
                 .role(user.getRole().getName())
+                .active(user.isActive())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();

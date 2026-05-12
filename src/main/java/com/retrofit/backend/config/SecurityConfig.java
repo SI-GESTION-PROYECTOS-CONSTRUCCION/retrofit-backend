@@ -53,12 +53,15 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login",
-                                "/auth/registerAdmin", "/projects/**", "/users/**").permitAll()
+                                "/auth/registerAdmin", "/projects/**", "/users/**", "/workers/**", "/project-assignments/**", "/progress-reports/**", "/uploads/**").permitAll()
                         .requestMatchers("/auth/profile").authenticated()
-                        .requestMatchers("/admin/**",
+                        .requestMatchers(
+                                "/admin/**",
                                 "/rol/**",
                                 "/permission/**",
-                                "/users/**").hasAnyAuthority("ADMIN_ACCESS")
+                                "/users/**",
+                                "/workers/**",
+                        "/project-assignments/**").hasAnyAuthority("ADMIN_ACCESS")
                         .requestMatchers("/rol/**").hasAuthority("ROLE_ACCESS")
                         .anyRequest().authenticated()
                 ).exceptionHandling(ex -> ex

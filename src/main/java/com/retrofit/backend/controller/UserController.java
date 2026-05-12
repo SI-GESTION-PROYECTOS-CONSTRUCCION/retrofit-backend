@@ -8,6 +8,10 @@ import com.retrofit.backend.repository.UserRepository;
 import com.retrofit.backend.dto.UserDTO;
 import com.retrofit.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,11 +27,6 @@ public class UserController {
     @PostMapping
     public ResponseEntity<UserDTO> registerUser(@RequestBody UserCreateDTO request){
         return ResponseEntity.ok(userService.registerUser(request));
-    }
-
-    @GetMapping("/rol/{role}")
-    public ResponseEntity<List<UserDTO>> getUserByRole(@PathVariable String role){
-        return ResponseEntity.ok(userService.getUsersByRole(role));
     }
 
     @GetMapping("/{id}")
@@ -47,11 +46,14 @@ public class UserController {
     }
 
     @GetMapping
-    public ResponseEntity<List<UserDTO>> getUsersByRole(
-            @RequestParam(value = "roleName", defaultValue = "ALL", required = false) String roleName) {
+    public ResponseEntity<Page<UserDTO>> getAll(
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "ALL") String roleName,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
 
-        List<UserDTO> users = userService.getUsersByRole(roleName);
-        return ResponseEntity.ok(users);
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+        return ResponseEntity.ok(userService.getAllUsers(search, roleName, pageable));
     }
 }
 

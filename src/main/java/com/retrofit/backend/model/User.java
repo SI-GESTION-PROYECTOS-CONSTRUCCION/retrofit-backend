@@ -27,19 +27,19 @@ public class User {
     @JoinColumn(name = "role_id", nullable = false)
     private RoleE role;
 
-    @Column(unique = false)
+    @Column(unique = false, columnDefinition = "TEXT")
     private String name;
 
     @Column(unique = false)
     private String lastName;
 
-    @Column(unique = true)
+    @Column(unique = true, columnDefinition = "TEXT")
     private String username;
 
     @Column(unique = true)
     private String email;
 
-    @Column(unique = false, columnDefinition = "boolean default true")
+    @Column(unique = false)
     private boolean active;
 
     @Column(unique = false)
