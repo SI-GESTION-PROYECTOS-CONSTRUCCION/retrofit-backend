@@ -5,6 +5,7 @@ import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "project_items")
@@ -41,6 +42,10 @@ public class ProjectItem {
 
     @Column(name = "equipment_yield")
     private Double equipmentYield = 0.0;
+
+    // En ProjectItem.java agrega esto:
+    @OneToMany(mappedBy = "projectItem", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProjectItemResource> apuDetails;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

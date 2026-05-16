@@ -1,6 +1,7 @@
 package com.retrofit.backend.controller;
 
 import com.retrofit.backend.dto.ProjectItemRequestDto;
+import com.retrofit.backend.dto.ProjectItemResourceRequestDto;
 import com.retrofit.backend.dto.ProjectItemResponseDto;
 import com.retrofit.backend.service.ProjectItemService;
 import jakarta.validation.Valid;
@@ -30,5 +31,14 @@ public class ProjectItemController {
 
         List<ProjectItemResponseDto> savedItems = itemService.saveBulkItems(projectId, dtos);
         return new ResponseEntity<>(savedItems, HttpStatus.CREATED);
+    }
+
+    @PostMapping("/{itemId}/apu")
+    public ResponseEntity<ProjectItemResponseDto> saveApuDetails(
+            @PathVariable Long itemId,
+            @RequestBody @Valid List<ProjectItemResourceRequestDto> dtos) {
+
+        ProjectItemResponseDto updatedItem = itemService.saveApuDetails(itemId, dtos);
+        return ResponseEntity.ok(updatedItem);
     }
 }

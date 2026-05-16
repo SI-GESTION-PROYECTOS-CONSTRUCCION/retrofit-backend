@@ -1,10 +1,13 @@
 package com.retrofit.backend.service;
 
 import com.retrofit.backend.dto.ProjectItemRequestDto;
+import com.retrofit.backend.dto.ProjectItemResourceRequestDto;
 import com.retrofit.backend.dto.ProjectItemResponseDto;
 import java.util.List;
 
 public interface ProjectItemService {
     List<ProjectItemResponseDto> getItemsByProjectId(Long projectId);
     List<ProjectItemResponseDto> saveBulkItems(Long projectId, List<ProjectItemRequestDto> dtos);
+    ProjectItemResponseDto saveApuDetails(Long itemId, List<ProjectItemResourceRequestDto> dtos);
+    ProjectItemResponseDto getProjectItemById(Long itemId);
 }

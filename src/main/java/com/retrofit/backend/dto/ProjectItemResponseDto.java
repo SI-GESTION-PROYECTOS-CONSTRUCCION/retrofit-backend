@@ -2,6 +2,9 @@ package com.retrofit.backend.dto;
 
 import lombok.Data;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Data
 public class ProjectItemResponseDto {
     private Long id;
@@ -14,4 +17,5 @@ public class ProjectItemResponseDto {
     private Integer level;
     private Double laborYield;
     private Double equipmentYield;
+    private List<ProjectItemResourceResponseDto> apuDetails = new ArrayList<>();
 }
