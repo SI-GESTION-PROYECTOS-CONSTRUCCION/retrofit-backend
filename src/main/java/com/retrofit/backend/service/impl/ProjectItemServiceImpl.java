@@ -63,6 +63,8 @@ public class ProjectItemServiceImpl implements ProjectItemService {
             item.setUnit(dto.getUnit());
             item.setTotalQuantity(dto.getTotalQuantity());
             item.setUnitPrice(dto.getUnitPrice());
+            item.setLaborYield(dto.getLaborYield() != null ? dto.getLaborYield() : 0.0);
+            item.setEquipmentYield(dto.getEquipmentYield() != null ? dto.getEquipmentYield() : 0.0);
 
             // Obtenemos el nivel de sangría (por defecto 0)
             int level = dto.getLevel() != null ? dto.getLevel() : 0;

@@ -15,4 +15,6 @@ public class ProjectItemRequestDto {
     private Double unitPrice;
 
     private Integer level;
+    private Double laborYield;
+    private Double equipmentYield;
 }

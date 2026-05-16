@@ -36,6 +36,12 @@ public class ProjectItem {
     @Column(name = "indent_level")
     private Integer level;
 
+    @Column(name = "labor_yield")
+    private Double laborYield = 0.0;
+
+    @Column(name = "equipment_yield")
+    private Double equipmentYield = 0.0;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

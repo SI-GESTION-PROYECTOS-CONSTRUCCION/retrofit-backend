@@ -12,4 +12,6 @@ public class ProjectItemResponseDto {
     private Double totalQuantity;
     private Double executedQuantity;
     private Integer level;
+    private Double laborYield;
+    private Double equipmentYield;
 }
