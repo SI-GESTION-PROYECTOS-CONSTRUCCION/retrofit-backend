@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/auth")
@@ -38,12 +39,18 @@ public class AuthController {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
+
+        List<String> permisos = user.getRole().getPermissions().stream()
+                .map(permission -> permission.getName())
+                .collect(Collectors.toList());
+
         UserProfileDTO dto = UserProfileDTO.builder()
                 .id(user.getId())
                 .email(user.getEmail())
                 .name(user.getName())
                 .lastName(user.getLastName())
                 .role(user.getRole().getName())
+                .permissions(permisos)
                 .build();
 
         return ResponseEntity.ok(dto);

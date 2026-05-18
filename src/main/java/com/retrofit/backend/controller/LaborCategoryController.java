@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,21 +20,25 @@ public class LaborCategoryController {
     private final LaborCategoryService service;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('RESOURCE_READ')")
     public ResponseEntity<List<ResourceResponseDto>> getAll() {
         return ResponseEntity.ok(service.getAll());
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('RESOURCE_CREATE')")
     public ResponseEntity<ResourceResponseDto> create(@RequestBody @Valid ResourceRequestDto dto) {
         return new ResponseEntity<>(service.create(dto), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('RESOURCE_UPDATE')")
     public ResponseEntity<ResourceResponseDto> update(@PathVariable Long id, @RequestBody @Valid ResourceRequestDto dto) {
         return ResponseEntity.ok(service.update(id, dto));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('RESOURCE_DELETE')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();

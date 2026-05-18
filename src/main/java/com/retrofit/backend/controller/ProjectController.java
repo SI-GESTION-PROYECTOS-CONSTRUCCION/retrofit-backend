@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
@@ -25,7 +26,6 @@ import java.util.stream.Collectors;
 public class ProjectController {
 
     private final ProjectService projectService;
-
 
     @GetMapping("/filters/statuses")
     public ResponseEntity<List<String>> getStatuses() {
@@ -44,6 +44,7 @@ public class ProjectController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('PROJECT_READ')")
     public ResponseEntity<Page<ProjectResponseDto>> getAll(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String priority,
@@ -58,26 +59,31 @@ public class ProjectController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('PROJECT_READ')")
     public ResponseEntity<ProjectResponseDto> getById(@PathVariable Long id) {
         return ResponseEntity.ok(projectService.getProjectById(id));
     }
 
     @GetMapping("/code/{code}")
+    @PreAuthorize("hasAuthority('PROJECT_READ')")
     public ResponseEntity<ProjectResponseDto> getByCode(@PathVariable String code) {
         return ResponseEntity.ok(projectService.getProjectByCode(code));
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('PROJECT_CREATE')")
     public ResponseEntity<ProjectResponseDto> create(@Valid @RequestBody ProjectRequestDto dto) {
         return new ResponseEntity<>(projectService.createProject(dto), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('PROJECT_UPDATE')")
     public ResponseEntity<ProjectResponseDto> update(@PathVariable Long id, @Valid @RequestBody ProjectRequestDto dto) {
         return ResponseEntity.ok(projectService.updateProject(id, dto));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('PROJECT_DELETE')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         projectService.deleteProject(id);
         return ResponseEntity.noContent().build();

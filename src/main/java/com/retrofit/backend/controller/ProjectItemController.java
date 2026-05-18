@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,11 +21,13 @@ public class ProjectItemController {
     private final ProjectItemService itemService;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('PROJECT_READ')")
     public ResponseEntity<List<ProjectItemResponseDto>> getProjectItems(@PathVariable Long projectId) {
         return ResponseEntity.ok(itemService.getItemsByProjectId(projectId));
     }
 
     @PostMapping("/bulk")
+    @PreAuthorize("hasAuthority('PROJECT_CREATE')")
     public ResponseEntity<List<ProjectItemResponseDto>> createBulkItems(
             @PathVariable Long projectId,
             @RequestBody @Valid List<ProjectItemRequestDto> dtos) {
@@ -34,6 +37,7 @@ public class ProjectItemController {
     }
 
     @PostMapping("/{itemId}/apu")
+    @PreAuthorize("hasAuthority('PROJECT_UPDATE')")
     public ResponseEntity<ProjectItemResponseDto> saveApuDetails(
             @PathVariable Long itemId,
             @RequestParam(defaultValue = "0") Double laborYield,
