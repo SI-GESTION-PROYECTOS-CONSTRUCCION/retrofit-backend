@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-@Service
+//@Service
 public class LocalStorageServiceImpl implements StorageService {
 
     private final String UPLOAD_DIR = "uploads/";
