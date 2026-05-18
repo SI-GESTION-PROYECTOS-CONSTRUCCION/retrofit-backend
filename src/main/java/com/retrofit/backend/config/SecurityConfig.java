@@ -62,7 +62,8 @@ public class SecurityConfig {
                                 "/uploads/**",
                                 "/materials/**",
                                 "/labor-categories/**",
-                                "/equipment/**").permitAll()
+                                "/equipment/**",
+                                "/resources/**").permitAll()
                         .requestMatchers("/auth/profile").authenticated()
                         .requestMatchers(
                                 "/admin/**",
