@@ -2,6 +2,7 @@ package com.retrofit.backend.model;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -12,4 +13,9 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 public class Equipment extends Resource {
+    @Override
+    @Transient
+    public String fetchResourceType() {
+        return "EQUIPMENT";
+    }
 }

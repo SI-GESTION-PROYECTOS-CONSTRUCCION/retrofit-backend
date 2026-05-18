@@ -25,4 +25,9 @@ public abstract class Resource {
 
     @Column(name = "base_price", nullable = false)
     private Double basePrice = 0.0;
+
+    @Transient
+    public String fetchResourceType() {
+        return "RESOURCE";
+    }
 }

@@ -36,9 +36,11 @@ public class ProjectItemController {
     @PostMapping("/{itemId}/apu")
     public ResponseEntity<ProjectItemResponseDto> saveApuDetails(
             @PathVariable Long itemId,
+            @RequestParam(defaultValue = "0") Double laborYield,
+            @RequestParam(defaultValue = "0") Double equipmentYield,
             @RequestBody @Valid List<ProjectItemResourceRequestDto> dtos) {
 
-        ProjectItemResponseDto updatedItem = itemService.saveApuDetails(itemId, dtos);
+        ProjectItemResponseDto updatedItem = itemService.saveApuDetails(itemId, laborYield, equipmentYield, dtos);
         return ResponseEntity.ok(updatedItem);
     }
 }

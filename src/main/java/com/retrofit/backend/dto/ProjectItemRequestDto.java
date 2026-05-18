@@ -5,6 +5,7 @@ import lombok.Data;
 
 @Data
 public class ProjectItemRequestDto {
+    private Long id;
     private String code;
 
     @NotBlank(message = "La descripción es obligatoria")
@@ -13,7 +14,7 @@ public class ProjectItemRequestDto {
     private String unit;
     private Double totalQuantity;
     private Double unitPrice;
-
+    private Integer itemOrder;
     private Integer level;
     private Double laborYield;
     private Double equipmentYield;

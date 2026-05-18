@@ -8,6 +8,6 @@ import java.util.List;
 public interface ProjectItemService {
     List<ProjectItemResponseDto> getItemsByProjectId(Long projectId);
     List<ProjectItemResponseDto> saveBulkItems(Long projectId, List<ProjectItemRequestDto> dtos);
-    ProjectItemResponseDto saveApuDetails(Long itemId, List<ProjectItemResourceRequestDto> dtos);
+    ProjectItemResponseDto saveApuDetails(Long itemId, Double laborYield, Double equipmentYield, List<ProjectItemResourceRequestDto> dtos);
     ProjectItemResponseDto getProjectItemById(Long itemId);
 }

@@ -43,9 +43,11 @@ public class ProjectItem {
     @Column(name = "equipment_yield")
     private Double equipmentYield = 0.0;
 
-    // En ProjectItem.java agrega esto:
     @OneToMany(mappedBy = "projectItem", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProjectItemResource> apuDetails;
+
+    @Column(name = "item_order")
+    private Integer itemOrder = 0;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

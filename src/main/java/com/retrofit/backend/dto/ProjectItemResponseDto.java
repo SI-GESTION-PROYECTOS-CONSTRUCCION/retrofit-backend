@@ -17,5 +17,6 @@ public class ProjectItemResponseDto {
     private Integer level;
     private Double laborYield;
     private Double equipmentYield;
+    private Integer itemOrder;
     private List<ProjectItemResourceResponseDto> apuDetails = new ArrayList<>();
 }
