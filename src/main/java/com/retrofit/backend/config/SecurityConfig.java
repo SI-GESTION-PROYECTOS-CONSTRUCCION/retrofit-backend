@@ -5,6 +5,7 @@ import com.retrofit.backend.exceptions.CustomAccessDeniedHandler;
 import com.retrofit.backend.service.impl.UserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -29,7 +30,8 @@ import static org.springframework.security.config.Customizer.withDefaults;
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
-
+    @Value("${cors.allowed-origins}")
+    private String allowedOrigins;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     @Bean
     public org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer webSecurityCustomizer() {
@@ -72,18 +74,10 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-
-        configuration.setAllowedOrigins(java.util.List.of(
-                "http://localhost:4200"
-        ));
-
+        configuration.setAllowedOrigins(java.util.Arrays.asList(allowedOrigins.split(",")));
 
         configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-
-
         configuration.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type", "Cache-Control"));
-
-
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
