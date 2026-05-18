@@ -3,13 +3,16 @@ package com.retrofit.backend.config;
 import com.retrofit.backend.auth.jwt.JwtAuthenticationFilter;
 import com.retrofit.backend.exceptions.CustomAccessDeniedHandler;
 import com.retrofit.backend.service.impl.UserDetailsServiceImpl;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,14 +25,12 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-    @Autowired
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
-
-    @Autowired
-    private UserDetailsServiceImpl userDetailsService;
-
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
     @Bean
     public org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer webSecurityCustomizer() {
         return (web) -> web.ignoring().requestMatchers("/public/images/**");
@@ -52,17 +53,11 @@ public class SecurityConfig {
                 .cors(withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/login",
-                                "/auth/registerAdmin", "/projects/**", "/users/**", "/workers/**", "/project-assignments/**", "/progress-reports/**", "/uploads/**").permitAll()
-                        .requestMatchers("/auth/profile").authenticated()
                         .requestMatchers(
-                                "/admin/**",
-                                "/rol/**",
-                                "/permission/**",
-                                "/users/**",
-                                "/workers/**",
-                        "/project-assignments/**").hasAnyAuthority("ADMIN_ACCESS")
-                        .requestMatchers("/rol/**").hasAuthority("ROLE_ACCESS")
+                                "/auth/login",
+                                "/auth/registerAdmin",
+                                "/uploads/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 ).exceptionHandling(ex -> ex
                         .accessDeniedHandler(customAccessDeniedHandler)

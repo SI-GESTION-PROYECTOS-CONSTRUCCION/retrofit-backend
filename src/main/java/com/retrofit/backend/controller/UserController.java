@@ -1,10 +1,6 @@
 package com.retrofit.backend.controller;
 
-
 import com.retrofit.backend.dto.UserCreateDTO;
-import com.retrofit.backend.dto.UserDTO;
-import com.retrofit.backend.repository.UserRepository;
-
 import com.retrofit.backend.dto.UserDTO;
 import com.retrofit.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -13,9 +9,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/users")
@@ -25,27 +20,32 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping
+    @PreAuthorize("hasAuthority('USER_CREATE')")
     public ResponseEntity<UserDTO> registerUser(@RequestBody UserCreateDTO request){
         return ResponseEntity.ok(userService.registerUser(request));
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('USER_READ')")
     public ResponseEntity<UserDTO> getUserById(@PathVariable Long id){
         return ResponseEntity.ok(userService.getUserById(id));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('USER_UPDATE')")
     public ResponseEntity<UserDTO> updateUser(@PathVariable Long id, @RequestBody UserCreateDTO dto){
         return ResponseEntity.ok(userService.updateUser(id, dto));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('USER_DELETE')")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id){
         userService.deleteUser(id);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('USER_READ')")
     public ResponseEntity<Page<UserDTO>> getAll(
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "ALL") String roleName,
@@ -56,4 +56,3 @@ public class UserController {
         return ResponseEntity.ok(userService.getAllUsers(search, roleName, pageable));
     }
 }
-

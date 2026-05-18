@@ -3,6 +3,7 @@ package com.retrofit.backend.dto;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 public class ProgressReportRequestDto {
@@ -18,4 +19,6 @@ public class ProgressReportRequestDto {
     private Double executedQuantity;
 
     private String observations;
+
+    private List<ProgressReportResourceRequestDto> usedResources;
 }
