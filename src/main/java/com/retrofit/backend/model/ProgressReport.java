@@ -5,6 +5,7 @@ import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -30,6 +31,9 @@ public class ProgressReport {
 
     @OneToMany(mappedBy = "progressReport", cascade = CascadeType.ALL)
     private List<ProgressPhoto> photos;
+
+    @OneToMany(mappedBy = "progressReport", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProgressReportResource> usedResources = new ArrayList<>();
 
     @CreationTimestamp
     @Column(updatable = false)

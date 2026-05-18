@@ -27,6 +27,8 @@ public class ProgressReportServiceImpl implements ProgressReportService {
     private final ProgressPhotoRepository photoRepository;
     private final ProjectRepository projectRepository;
     private final StorageService storageService;
+    private final ProgressReportResourceRepository progressReportResourceRepository;
+    private final ResourceRepository resourceRepository;
 
     @Transactional
     public void createReportWithPhotos(ProgressReportRequestDto dto, List<MultipartFile> files) {
@@ -53,6 +55,25 @@ public class ProgressReportServiceImpl implements ProgressReportService {
         report.setReportDate(dto.getReportDate());
         report.setExecutedQuantity(dto.getExecutedQuantity());
         report.setObservations(dto.getObservations());
+
+        if (dto.getUsedResources() != null && !dto.getUsedResources().isEmpty()) {
+            for (com.retrofit.backend.dto.ProgressReportResourceRequestDto resDto : dto.getUsedResources()) {
+
+                Resource resource = resourceRepository.findById(resDto.getResourceId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Recurso no encontrado: " + resDto.getResourceId()));
+
+                ProgressReportResource prr = new ProgressReportResource();
+                prr.setProgressReport(report);
+                prr.setResource(resource);
+
+                prr.setTheoreticalQuantity(resDto.getTheoreticalQuantity() != null ? resDto.getTheoreticalQuantity() : 0.0);
+                prr.setRealQuantity(resDto.getRealQuantity() != null ? resDto.getRealQuantity() : 0.0);
+
+                report.getUsedResources().add(prr);
+            }
+        }
+
+        // Guardamos todo en cascada (El reporte y sus recursos hijos)
         ProgressReport savedReport = reportRepository.save(report);
 
         // 4. PROCESAR Y GUARDAR FOTOS
@@ -140,6 +161,7 @@ public class ProgressReportServiceImpl implements ProgressReportService {
         java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", new java.util.Locale("es", "ES"));
 
         java.util.Map<String, List<ProgressReportResponseDto>> groupedMap = reports.stream().map(report -> {
+            // Mapeo básico que ya tenías
             ProgressReportResponseDto dto = new ProgressReportResponseDto();
             dto.setId(report.getId());
             dto.setItemCode(report.getProjectItem().getCode());
@@ -149,6 +171,27 @@ public class ProgressReportServiceImpl implements ProgressReportService {
             dto.setUnit(report.getProjectItem().getUnit());
             dto.setObservations(report.getObservations());
 
+
+            if (report.getUsedResources() != null && !report.getUsedResources().isEmpty()) {
+                List<com.retrofit.backend.dto.ProgressReportResourceResponseDto> resourceDtos = report.getUsedResources().stream().map(prr -> {
+                    com.retrofit.backend.dto.ProgressReportResourceResponseDto resDto = new com.retrofit.backend.dto.ProgressReportResourceResponseDto();
+                    resDto.setId(prr.getId());
+                    resDto.setResourceId(prr.getResource().getId());
+                    resDto.setResourceName(prr.getResource().getName());
+                    resDto.setResourceUnit(prr.getResource().getUnit());
+                    resDto.setTheoreticalQuantity(prr.getTheoreticalQuantity());
+                    resDto.setRealQuantity(prr.getRealQuantity());
+
+                    // Magia del Polimorfismo que programamos antes
+                    resDto.setResourceType(prr.getResource().fetchResourceType());
+
+                    return resDto;
+                }).collect(Collectors.toList());
+
+                dto.setUsedResources(resourceDtos);
+            }
+
+            // Fotos (que ya tenías)
             if (report.getPhotos() != null) {
                 dto.setPhotoUrls(report.getPhotos().stream()
                         .map(ProgressPhoto::getFileUrl)
