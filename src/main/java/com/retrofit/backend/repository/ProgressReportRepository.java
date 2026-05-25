@@ -25,4 +25,34 @@ public interface ProgressReportRepository extends JpaRepository<ProgressReport, 
             @Param("endDate") LocalDate endDate,
             @Param("itemCode") String itemCode
     );
+
+    // Calcula el Valor Ganado (EV) Total de un proyecto
+    @Query("SELECT COALESCE(SUM(pr.executedQuantity * pi.unitPrice), 0.0) " +
+            "FROM ProgressReport pr " +
+            "JOIN pr.projectItem pi " +
+            "WHERE pi.project.id = :projectId")
+    Double calculateEarnedValueByProjectId(@Param("projectId") Long projectId);
+
+    // Trae todos los reportes de progreso de un proyecto ordenados por fecha (Para la Curva S)
+    @Query("SELECT pr FROM ProgressReport pr " +
+            "JOIN pr.projectItem pi " +
+            "WHERE pi.project.id = :projectId " +
+            "ORDER BY pr.reportDate ASC")
+    List<ProgressReport> findAllByProjectIdOrderByDateAsc(@Param("projectId") Long projectId);
+
+    // Calcula el Valor Ganado (EV) de una partida específica (Para saber si está en rojo)
+    @Query("SELECT COALESCE(SUM(pr.executedQuantity * pi.unitPrice), 0.0) " +
+            "FROM ProgressReport pr " +
+            "JOIN pr.projectItem pi " +
+            "WHERE pi.id = :projectItemId")
+    Double calculateEarnedValueByProjectItemId(@Param("projectItemId") Long projectItemId);
+
+    // Calcula el Valor Ganado por fecha (Para la Curva S)
+    @Query("SELECT pr.reportDate, COALESCE(SUM(pr.executedQuantity * pi.unitPrice), 0.0) " +
+            "FROM ProgressReport pr " +
+            "JOIN pr.projectItem pi " +
+            "WHERE pi.project.id = :projectId " +
+            "GROUP BY pr.reportDate " +
+            "ORDER BY pr.reportDate ASC")
+    List<Object[]> getEarnedValueByDate(@Param("projectId") Long projectId);
 }
