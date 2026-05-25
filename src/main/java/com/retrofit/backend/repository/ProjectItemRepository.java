@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface ProjectItemRepository extends JpaRepository<ProjectItem, Long> {
     List<ProjectItem> findByProjectIdOrderByItemOrderAsc(Long projectId);
+    List<ProjectItem> findByPredecessorId(Long predecessorId);
+    List<ProjectItem> findByProjectId(Long projectId);
 }

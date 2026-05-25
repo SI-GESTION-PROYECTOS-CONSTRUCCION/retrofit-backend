@@ -12,7 +12,7 @@ public class ProjectResponseDto {
     private String client;
     private String location;
     private String description;
-    private LocalDate estimatedDeliveryDate;
+    private LocalDate startDate;
     private String status;
     private String priority;
     private Double currentProgress;

@@ -1,9 +1,6 @@
 package com.retrofit.backend.service.impl;
 
-import com.retrofit.backend.dto.ProjectItemRequestDto;
-import com.retrofit.backend.dto.ProjectItemResourceRequestDto;
-import com.retrofit.backend.dto.ProjectItemResourceResponseDto;
-import com.retrofit.backend.dto.ProjectItemResponseDto;
+import com.retrofit.backend.dto.*;
 import com.retrofit.backend.exceptions.ResourceNotFoundException;
 import com.retrofit.backend.model.*;
 import com.retrofit.backend.repository.*;
@@ -13,8 +10,9 @@ import lombok.RequiredArgsConstructor;
 import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -202,6 +200,27 @@ public class ProjectItemServiceImpl implements ProjectItemService {
         // Recalcular el presupuesto total del proyecto
         recalculateProjectTotalBudget(item.getProject());
 
+        if (item.getStartDate() != null && item.getTotalQuantity() != null && laborYield != null && laborYield > 0) {
+
+            // 1. Calculamos la nueva duración real en días
+            int newBaseDays = (int) Math.ceil(item.getTotalQuantity() / laborYield);
+
+            // 2. Calculamos cuánto duraba antes en la base de datos (según sus fechas)
+            long oldBaseDays = 1; // Por defecto
+            if (item.getEndDate() != null) {
+                oldBaseDays = ChronoUnit.DAYS.between(item.getStartDate(), item.getEndDate());
+            }
+
+            // 3. Si la duración cambió, disparamos la cascada
+            if (newBaseDays != oldBaseDays) {
+                item.setEndDate(item.getStartDate().plusDays(newBaseDays));
+                itemRepository.saveAndFlush(item);
+
+                long daysShifted = newBaseDays - oldBaseDays;
+                cascadeDateShift(item.getId(), daysShifted);
+            }
+        }
+
         return getProjectItemById(itemId);
     }
 
@@ -257,5 +276,122 @@ public class ProjectItemServiceImpl implements ProjectItemService {
             dto.setApuDetails(apuDtos);
         }
         return dto;
+    }
+
+
+    @Transactional
+    public void updateGanttDates(Long itemId, GanttUpdateDto dto) {
+        ProjectItem item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Partida no encontrada"));
+
+        // 1. Calculamos cuántos días se está moviendo la barra hacia el futuro o pasado
+        long daysShifted = 0;
+        if (item.getStartDate() != null && dto.getStartDate() != null) {
+            daysShifted = ChronoUnit.DAYS.between(item.getStartDate(), dto.getStartDate());
+        }
+
+        // 2. Actualizamos la partida actual con las fechas que mandó Angular
+        item.setStartDate(dto.getStartDate());
+        item.setEndDate(dto.getEndDate());
+        item.setPredecessorId(dto.getPredecessorId());
+        itemRepository.save(item);
+
+        // 3. EFECTO DOMINÓ: Si la barra se movió (daysShifted != 0), empujamos a sus hijas
+        if (daysShifted != 0) {
+            cascadeDateShift(item.getId(), daysShifted);
+        }
+    }
+
+    // Método recursivo para empujar a los hijos, y a los hijos de los hijos
+    private void cascadeDateShift(Long parentId, long daysShifted) {
+        List<ProjectItem> children = itemRepository.findByPredecessorId(parentId);
+
+        for (ProjectItem child : children) {
+            if (child.getStartDate() != null) {
+                child.setStartDate(child.getStartDate().plusDays(daysShifted));
+            }
+            if (child.getEndDate() != null) {
+                child.setEndDate(child.getEndDate().plusDays(daysShifted));
+            }
+            itemRepository.save(child);
+
+            // Si este hijo tiene otras partidas amarradas a él, la cascada continúa
+            cascadeDateShift(child.getId(), daysShifted);
+        }
+    }
+
+
+    public List<GanttItemResponseDto> getGanttItems(Long projectId) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado"));
+
+        List<ProjectItem> items = itemRepository.findByProjectId(projectId);
+        // Respetamos el orden exacto del presupuesto
+        items.sort(Comparator.comparing(ProjectItem::getItemOrder, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(ProjectItem::getId));
+
+        LocalDate currentDate = project.getStartDate();
+        Long prevLeafItemId = null; // Guardará solo IDs de tareas "hijas"
+
+        // 1. AUTO-LINKER: Solo para tareas reales (que tienen metrado)
+        for (ProjectItem item : items) {
+            boolean isParent = (item.getTotalQuantity() == null || item.getTotalQuantity() == 0);
+
+            if (!isParent && item.getStartDate() == null) {
+                int baseDays = 1;
+                if (item.getLaborYield() != null && item.getLaborYield() > 0) {
+                    baseDays = (int) Math.ceil(item.getTotalQuantity() / item.getLaborYield());
+                }
+
+                item.setStartDate(currentDate);
+                item.setEndDate(currentDate.plusDays(baseDays));
+                item.setPredecessorId(prevLeafItemId); // Solo se amarra a la hija anterior
+                itemRepository.save(item);
+
+                currentDate = item.getEndDate();
+                prevLeafItemId = item.getId();
+            }
+        }
+
+        // 2. MAPEO CON JERARQUÍA (Padres e Hijos)
+        Map<Integer, Long> levelTracker = new HashMap<>(); // Para rastrear quién es el padre actual de cada nivel
+
+        return items.stream().map(item -> {
+            int currentLevel = item.getLevel() != null ? item.getLevel() : 0;
+            levelTracker.put(currentLevel, item.getId()); // Actualizamos el ID de este nivel
+
+            // El padre siempre es el último elemento registrado en el nivel superior (currentLevel - 1)
+            Long myParentId = currentLevel > 0 ? levelTracker.get(currentLevel - 1) : null;
+            boolean isParent = (item.getTotalQuantity() == null || item.getTotalQuantity() == 0);
+
+            GanttItemResponseDto dto = new GanttItemResponseDto();
+            dto.setId(item.getId());
+            dto.setName(item.getDescription());
+            dto.setTotalQuantity(item.getTotalQuantity());
+            dto.setLaborYield(item.getLaborYield());
+            dto.setStartDate(item.getStartDate());
+            dto.setEndDate(item.getEndDate());
+            dto.setPredecessorId(item.getPredecessorId());
+            dto.setCode(item.getCode());
+            // --- INYECCIÓN DE JERARQUÍA ---
+            dto.setParentId(myParentId);
+            dto.setType(isParent ? "project" : "task");
+            // ------------------------------
+
+            int baseDays = 1;
+            if (!isParent && item.getTotalQuantity() != null && item.getLaborYield() != null && item.getLaborYield() > 0) {
+                baseDays = (int) Math.ceil(item.getTotalQuantity() / item.getLaborYield());
+            }
+            dto.setBaseDurationDays(isParent ? 0 : baseDays);
+
+            Double executed = reportRepository.sumExecutedQuantityByItemId(item.getId());
+            double progress = 0.0;
+            if (!isParent && executed != null && item.getTotalQuantity() > 0) {
+                progress = (executed / item.getTotalQuantity()) * 100;
+            }
+            dto.setCurrentProgressPercentage(progress);
+
+            return dto;
+        }).collect(Collectors.toList());
     }
 }

@@ -1,8 +1,7 @@
 package com.retrofit.backend.service;
 
-import com.retrofit.backend.dto.ProjectItemRequestDto;
-import com.retrofit.backend.dto.ProjectItemResourceRequestDto;
-import com.retrofit.backend.dto.ProjectItemResponseDto;
+import com.retrofit.backend.dto.*;
+
 import java.util.List;
 
 public interface ProjectItemService {
@@ -10,4 +9,6 @@ public interface ProjectItemService {
     List<ProjectItemResponseDto> saveBulkItems(Long projectId, List<ProjectItemRequestDto> dtos);
     ProjectItemResponseDto saveApuDetails(Long itemId, Double laborYield, Double equipmentYield, List<ProjectItemResourceRequestDto> dtos);
     ProjectItemResponseDto getProjectItemById(Long itemId);
+    void updateGanttDates(Long itemId, GanttUpdateDto dto);
+    List<GanttItemResponseDto> getGanttItems(Long projectId);
 }
