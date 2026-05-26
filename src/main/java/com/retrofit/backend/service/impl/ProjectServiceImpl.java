@@ -112,7 +112,7 @@ public class ProjectServiceImpl implements ProjectService {
         project.setClient(dto.getClient());
         project.setLocation(dto.getLocation());
         project.setDescription(dto.getDescription());
-        project.setEstimatedDeliveryDate(dto.getEstimatedDeliveryDate());
+        project.setStartDate(dto.getStartDate());
 
         try {
             project.setStatus(ProjectStatus.valueOf(dto.getStatus().toUpperCase()));
@@ -144,7 +144,7 @@ public class ProjectServiceImpl implements ProjectService {
 
         dto.setLocation(project.getLocation());
         dto.setDescription(project.getDescription());
-        dto.setEstimatedDeliveryDate(project.getEstimatedDeliveryDate());
+        dto.setStartDate(project.getStartDate());
 
         dto.setStatus(project.getStatus().name());
         dto.setPriority(project.getPriority().name());

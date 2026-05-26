@@ -9,13 +9,12 @@ import java.util.List;
 
 public interface ProjectItemRepository extends JpaRepository<ProjectItem, Long> {
     List<ProjectItem> findByProjectIdOrderByItemOrderAsc(Long projectId);
+    List<ProjectItem> findByPredecessorId(Long predecessorId);
 
     // Calcular el Presupuesto Total Planeado de un Proyecto
     @Query("SELECT COALESCE(SUM(pi.totalQuantity * pi.unitPrice), 0.0) " +
             "FROM ProjectItem pi " +
             "WHERE pi.project.id = :projectId")
     Double calculatePlannedValueByProjectId(@Param("projectId") Long projectId);
-
-    // Trae las partidas de un proyecto para luego buscar las que están en rojo
     List<ProjectItem> findByProjectId(Long projectId);
 }

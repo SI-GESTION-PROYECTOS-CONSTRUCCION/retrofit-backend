@@ -35,8 +35,8 @@ public class Project {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "estimated_delivery_date")
-    private LocalDate estimatedDeliveryDate;
+    @Column(name = "start_date")
+    private LocalDate startDate;
 
     @Enumerated(EnumType.STRING)
     private ProjectStatus status;

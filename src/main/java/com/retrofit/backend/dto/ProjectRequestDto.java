@@ -26,9 +26,9 @@ public class ProjectRequestDto {
 
     private String description;
 
-    @NotNull(message = "La fecha estimada de entrega es obligatoria")
-    @FutureOrPresent(message = "La fecha estimada de entrega debe ser hoy o en el futuro")
-    private LocalDate estimatedDeliveryDate;
+    @NotNull(message = "La fecha de inicio es obligatoria")
+    @FutureOrPresent(message = "La fecha de inicio puede ser hoy o en el futuro")
+    private LocalDate startDate;
 
     @NotBlank(message = "El estado inicial es obligatorio")
     private String status;

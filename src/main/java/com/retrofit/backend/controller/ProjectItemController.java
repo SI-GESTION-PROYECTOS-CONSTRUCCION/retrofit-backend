@@ -1,8 +1,6 @@
 package com.retrofit.backend.controller;
 
-import com.retrofit.backend.dto.ProjectItemRequestDto;
-import com.retrofit.backend.dto.ProjectItemResourceRequestDto;
-import com.retrofit.backend.dto.ProjectItemResponseDto;
+import com.retrofit.backend.dto.*;
 import com.retrofit.backend.service.ProjectItemService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +22,23 @@ public class ProjectItemController {
     @PreAuthorize("hasAuthority('PROJECT_READ')")
     public ResponseEntity<List<ProjectItemResponseDto>> getProjectItems(@PathVariable Long projectId) {
         return ResponseEntity.ok(itemService.getItemsByProjectId(projectId));
+    }
+
+    @PutMapping("/{id}/gantt")
+    @PreAuthorize("hasAuthority('PROJECT_READ')")
+    public ResponseEntity<Void> updateGanttDates(
+            @PathVariable Long id,
+            @RequestBody GanttUpdateDto dto) {
+
+        itemService.updateGanttDates(id, dto);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/gantt")
+    @PreAuthorize("hasAuthority('PROJECT_READ')")
+    public ResponseEntity<List<GanttItemResponseDto>> getGanttItems(@PathVariable Long projectId) {
+        List<GanttItemResponseDto> ganttData = itemService.getGanttItems(projectId);
+        return ResponseEntity.ok(ganttData);
     }
 
     @PostMapping("/bulk")

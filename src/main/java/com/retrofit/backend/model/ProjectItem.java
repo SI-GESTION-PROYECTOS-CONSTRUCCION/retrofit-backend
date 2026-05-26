@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -48,6 +49,15 @@ public class ProjectItem {
 
     @Column(name = "item_order")
     private Integer itemOrder = 0;
+
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
+    @Column(name = "predecessor_id")
+    private Long predecessorId;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
