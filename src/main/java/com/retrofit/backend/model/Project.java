@@ -1,5 +1,7 @@
 package com.retrofit.backend.model;
 
+import com.retrofit.backend.enums.ProjectPriority;
+import com.retrofit.backend.enums.ProjectStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;

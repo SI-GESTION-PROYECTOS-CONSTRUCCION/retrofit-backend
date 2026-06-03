@@ -79,6 +79,10 @@ public class DataInitializer implements CommandLineRunner {
         Permission secUpdate = createPermissionIfNotExists("SECURITY_UPDATE");
         Permission secDelete = createPermissionIfNotExists("SECURITY_DELETE");
 
+        Permission invCreate = createPermissionIfNotExists("INVENTORY_CREATE"); // Para Inbound/Outbound
+        Permission invRead   = createPermissionIfNotExists("INVENTORY_READ");   // Para ver Stock y Kardex
+        Permission invUpdate = createPermissionIfNotExists("INVENTORY_UPDATE"); // Solo Admin (Emergencias)
+        Permission invDelete = createPermissionIfNotExists("INVENTORY_DELETE"); // Solo Admin (Emergencias)
 
         createRoleIfNotExists("ADMIN", "Administrador General del Sistema", Set.of(
                 pCreate, pRead, pUpdate, pDelete,
@@ -86,7 +90,8 @@ public class DataInitializer implements CommandLineRunner {
                 repCreate, repRead, repUpdate, repDelete,
                 wCreate, wRead, wUpdate, wDelete,
                 uCreate, uRead, uUpdate, uDelete,
-                secCreate, secRead, secUpdate, secDelete
+                secCreate, secRead, secUpdate, secDelete,
+                invCreate, invRead, invUpdate, invDelete
         ));
 
         // ROL: INGENIERO RESIDENTE (Control Operativo de Campo)
@@ -94,14 +99,16 @@ public class DataInitializer implements CommandLineRunner {
                 pRead,                            // Solo puede ver el proyecto (Línea Base)
                 rRead,                            // Puede consultar el catálogo de APUs
                 repCreate, repRead, repUpdate,    // Administra los avances diarios
-                wRead, wUpdate                    // Puede ver a su personal y actualizar cosas menores
+                wRead, wUpdate,                    // Puede ver a su personal y actualizar cosas menores
+                invRead, invCreate
         ));
 
         // ROL: ALMACENERO (Control Logístico)
         createRoleIfNotExists("ALMACENERO", "Almacenero de Obra", Set.of(
                 pRead,                            // Necesita ver los proyectos para despachar
                 rRead,                            // Consulta los materiales del catálogo
-                repCreate, repRead                // Registra los vales de salida / reportes de consumo
+                repCreate, repRead,               // Registra los vales de salida / reportes de consumo
+                invCreate, invRead
         ));
     }
 

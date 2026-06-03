@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Data
-public class ProjectItemResponseDto {
+public class    ProjectItemResponseDto {
     private Long id;
     private String description;
     private String code;

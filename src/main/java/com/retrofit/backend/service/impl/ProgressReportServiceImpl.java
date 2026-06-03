@@ -3,6 +3,7 @@ package com.retrofit.backend.service.impl;
 import com.retrofit.backend.dto.GroupedProgressReportDto;
 import com.retrofit.backend.dto.ProgressReportRequestDto;
 import com.retrofit.backend.dto.ProgressReportResponseDto;
+import com.retrofit.backend.enums.ProjectStatus;
 import com.retrofit.backend.exceptions.ResourceNotFoundException;
 import com.retrofit.backend.model.*;
 import com.retrofit.backend.repository.*;

@@ -1,4 +1,4 @@
-package com.retrofit.backend.model;
+package com.retrofit.backend.enums;
 
 public enum ProjectStatus {
     PLANNING, IN_PROGRESS, ON_HOLD, COMPLETED, CANCELLED
