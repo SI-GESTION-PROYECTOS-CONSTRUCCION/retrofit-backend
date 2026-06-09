@@ -2,8 +2,8 @@ package com.retrofit.backend.controller;
 
 import com.retrofit.backend.dto.ProjectRequestDto;
 import com.retrofit.backend.dto.ProjectResponseDto;
-import com.retrofit.backend.model.ProjectPriority;
-import com.retrofit.backend.model.ProjectStatus;
+import com.retrofit.backend.enums.ProjectPriority;
+import com.retrofit.backend.enums.ProjectStatus;
 import com.retrofit.backend.service.ProjectService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

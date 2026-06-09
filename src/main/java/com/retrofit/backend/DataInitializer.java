@@ -72,36 +72,59 @@ public class DataInitializer implements CommandLineRunner {
         Permission uDelete = createPermissionIfNotExists("USER_DELETE");
 
         // ==========================================
-        // 6. MÓDULO: SEGURIDAD Y ROLES (El que crearemos a continuación)
+        // 6. MÓDULO: SEGURIDAD Y ROLES
         // ==========================================
         Permission secCreate = createPermissionIfNotExists("SECURITY_CREATE");
         Permission secRead   = createPermissionIfNotExists("SECURITY_READ");
         Permission secUpdate = createPermissionIfNotExists("SECURITY_UPDATE");
         Permission secDelete = createPermissionIfNotExists("SECURITY_DELETE");
 
+        // ==========================================
+        // 7. MÓDULO: INVENTARIO (Almacén)
+        // ==========================================
+        Permission invCreate = createPermissionIfNotExists("INVENTORY_CREATE");
+        Permission invRead   = createPermissionIfNotExists("INVENTORY_READ");
+        Permission invUpdate = createPermissionIfNotExists("INVENTORY_UPDATE");
+        Permission invDelete = createPermissionIfNotExists("INVENTORY_DELETE");
 
+        // ==========================================
+        // 8. MÓDULO: AUDITORÍA (AuditController)
+        // ==========================================
+        Permission auditRead   = createPermissionIfNotExists("AUDIT_READ");
+        Permission auditExport = createPermissionIfNotExists("AUDIT_EXPORT"); // Para el botón de "Exportar"
+
+
+        // ==========================================
+        // ASIGNACIÓN A ROLES
+        // ==========================================
+
+        // ROL: ADMIN (Tiene acceso a TODO, incluyendo AUDITORÍA)
         createRoleIfNotExists("ADMIN", "Administrador General del Sistema", Set.of(
                 pCreate, pRead, pUpdate, pDelete,
                 rCreate, rRead, rUpdate, rDelete,
                 repCreate, repRead, repUpdate, repDelete,
                 wCreate, wRead, wUpdate, wDelete,
                 uCreate, uRead, uUpdate, uDelete,
-                secCreate, secRead, secUpdate, secDelete
+                secCreate, secRead, secUpdate, secDelete,
+                invCreate, invRead, invUpdate, invDelete,
+                auditRead, auditExport
         ));
 
         // ROL: INGENIERO RESIDENTE (Control Operativo de Campo)
         createRoleIfNotExists("INGENIERO_RESIDENTE", "Ingeniero Residente de Obra", Set.of(
-                pRead,                            // Solo puede ver el proyecto (Línea Base)
-                rRead,                            // Puede consultar el catálogo de APUs
-                repCreate, repRead, repUpdate,    // Administra los avances diarios
-                wRead, wUpdate                    // Puede ver a su personal y actualizar cosas menores
+                pRead,
+                rRead,
+                repCreate, repRead, repUpdate,
+                wRead, wUpdate,
+                invRead, invCreate
         ));
 
         // ROL: ALMACENERO (Control Logístico)
         createRoleIfNotExists("ALMACENERO", "Almacenero de Obra", Set.of(
-                pRead,                            // Necesita ver los proyectos para despachar
-                rRead,                            // Consulta los materiales del catálogo
-                repCreate, repRead                // Registra los vales de salida / reportes de consumo
+                pRead,
+                rRead,
+                repCreate, repRead,
+                invCreate, invRead
         ));
     }
 

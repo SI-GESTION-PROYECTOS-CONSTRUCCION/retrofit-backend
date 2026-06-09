@@ -3,9 +3,11 @@ package com.retrofit.backend.service.impl;
 import com.retrofit.backend.dto.GroupedProgressReportDto;
 import com.retrofit.backend.dto.ProgressReportRequestDto;
 import com.retrofit.backend.dto.ProgressReportResponseDto;
+import com.retrofit.backend.enums.ProjectStatus;
 import com.retrofit.backend.exceptions.ResourceNotFoundException;
 import com.retrofit.backend.model.*;
 import com.retrofit.backend.repository.*;
+import com.retrofit.backend.service.AuditService;
 import com.retrofit.backend.service.ProgressReportService;
 import com.retrofit.backend.service.StorageService;
 import jakarta.transaction.Transactional;
@@ -29,6 +31,7 @@ public class ProgressReportServiceImpl implements ProgressReportService {
     private final StorageService storageService;
     private final ProgressReportResourceRepository progressReportResourceRepository;
     private final ResourceRepository resourceRepository;
+    private final AuditService auditService;
 
     @Transactional
     public void createReportWithPhotos(ProgressReportRequestDto dto, List<MultipartFile> files) {
@@ -40,8 +43,10 @@ public class ProgressReportServiceImpl implements ProgressReportService {
         if (item.getProject().getStatus() == ProjectStatus.COMPLETED || item.getProject().getCurrentProgress() >= 100.0) {
             throw new IllegalStateException("El registro está cerrado. Este proyecto ya ha sido completado al 100%.");
         }
-        // 2. VALIDACIÓN LÓGICA CRÍTICA (REGLA DE NEGOCIO)
+
+        // 2. VALIDACIÓN LÓGICA CRÍTICA
         Double alreadyExecuted = reportRepository.sumExecutedQuantityByItemId(item.getId());
+        if (alreadyExecuted == null) alreadyExecuted = 0.0; // Prevención de nulos
         Double remainingQuantity = item.getTotalQuantity() - alreadyExecuted;
 
         if (dto.getExecutedQuantity() > remainingQuantity) {
@@ -73,30 +78,33 @@ public class ProgressReportServiceImpl implements ProgressReportService {
             }
         }
 
-        // Guardamos todo en cascada (El reporte y sus recursos hijos)
         ProgressReport savedReport = reportRepository.save(report);
 
         // 4. PROCESAR Y GUARDAR FOTOS
+        List<ProgressPhoto> savedPhotos = new ArrayList<>();
         if (files != null && !files.isEmpty()) {
-            List<ProgressPhoto> photosToSave = new ArrayList<>();
             for (MultipartFile file : files) {
                 if (!file.isEmpty()) {
-                    // El StorageService guarda en disco y devuelve la URL local (ej. http://localhost...)
                     String fileUrl = storageService.store(file);
-
                     ProgressPhoto photo = new ProgressPhoto();
                     photo.setProgressReport(savedReport);
                     photo.setFileName(file.getOriginalFilename());
                     photo.setFileSizeBytes(file.getSize());
                     photo.setFileUrl(fileUrl);
-                    photosToSave.add(photo);
+                    savedPhotos.add(photo);
                 }
             }
-            photoRepository.saveAll(photosToSave);
+            photoRepository.saveAll(savedPhotos);
+            savedReport.setPhotos(savedPhotos); // Se las asignamos al reporte para que salgan en el JSON
         }
 
         // 5. ACTUALIZAR PROGRESO GLOBAL DEL PROYECTO
         updateProjectOverallProgress(item.getProject());
+
+        //  6. GRABAR AUDITORÍA MANUALMENTE
+        // Usamos nuestro método refactorizado para que el JSON quede limpio y perfecto
+        ProgressReportResponseDto estadoNuevo = mapToResponseDto(savedReport);
+        auditService.logAction("CREATE", "Avances de Obra", savedReport.getId(), null, estadoNuevo);
     }
 
     private void updateProjectOverallProgress(Project project) {
@@ -106,7 +114,6 @@ public class ProgressReportServiceImpl implements ProgressReportService {
         double totalProgressSum = 0;
         int validItemsCount = 0;
 
-        // Calculamos el % de avance de cada partida y sacamos el promedio de la obra
         for (ProjectItem i : allItems) {
             if (i.getTotalQuantity() == null || i.getTotalQuantity() == 0) {
                 continue;
@@ -135,24 +142,18 @@ public class ProgressReportServiceImpl implements ProgressReportService {
 
         project.setCurrentProgress(projectProgress);
 
-
         if (projectProgress >= 100.0) {
-            // Si llegó al 100%, se completa automáticamente
             project.setStatus(ProjectStatus.COMPLETED);
         } else if (projectProgress > 0.0) {
-            // Si ya avanzó algo, y seguía en fase de planeamiento, pasa a ejecución
             if (project.getStatus() == ProjectStatus.PLANNING) {
                 project.setStatus(ProjectStatus.IN_PROGRESS);
             }
-            // (Si está ON_HOLD no lo tocamos, respetamos la pausa de gerencia)
         } else {
-            // Si por alguna razón el progreso vuelve a 0 (ej. eliminaron el único reporte)
             project.setStatus(ProjectStatus.PLANNING);
         }
 
         projectRepository.save(project);
     }
-
 
     public List<GroupedProgressReportDto> getFilteredAndGroupedReports(Long projectId, LocalDate startDate, LocalDate endDate, String itemCode) {
         String codeFilter = (itemCode != null && !itemCode.trim().isEmpty()) ? "%" + itemCode.trim() + "%" : null;
@@ -160,52 +161,13 @@ public class ProgressReportServiceImpl implements ProgressReportService {
 
         java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", new java.util.Locale("es", "ES"));
 
-        java.util.Map<String, List<ProgressReportResponseDto>> groupedMap = reports.stream().map(report -> {
-            // Mapeo básico que ya tenías
-            ProgressReportResponseDto dto = new ProgressReportResponseDto();
-            dto.setId(report.getId());
-            dto.setItemCode(report.getProjectItem().getCode());
-            dto.setItemDescription(report.getProjectItem().getDescription());
-            dto.setReportDate(report.getReportDate());
-            dto.setExecutedQuantity(report.getExecutedQuantity());
-            dto.setUnit(report.getProjectItem().getUnit());
-            dto.setObservations(report.getObservations());
-
-
-            if (report.getUsedResources() != null && !report.getUsedResources().isEmpty()) {
-                List<com.retrofit.backend.dto.ProgressReportResourceResponseDto> resourceDtos = report.getUsedResources().stream().map(prr -> {
-                    com.retrofit.backend.dto.ProgressReportResourceResponseDto resDto = new com.retrofit.backend.dto.ProgressReportResourceResponseDto();
-                    resDto.setId(prr.getId());
-                    resDto.setResourceId(prr.getResource().getId());
-                    resDto.setResourceName(prr.getResource().getName());
-                    resDto.setResourceUnit(prr.getResource().getUnit());
-                    resDto.setTheoreticalQuantity(prr.getTheoreticalQuantity());
-                    resDto.setRealQuantity(prr.getRealQuantity());
-
-                    // Magia del Polimorfismo que programamos antes
-                    resDto.setResourceType(prr.getResource().fetchResourceType());
-
-                    return resDto;
-                }).collect(Collectors.toList());
-
-                dto.setUsedResources(resourceDtos);
-            }
-
-            // Fotos (que ya tenías)
-            if (report.getPhotos() != null) {
-                dto.setPhotoUrls(report.getPhotos().stream()
-                        .map(ProgressPhoto::getFileUrl)
-                        .collect(Collectors.toList()));
-            }
-            return dto;
-        }).collect(Collectors.groupingBy(
-
-                dto -> dto.getReportDate().format(formatter).toUpperCase(),
-
-                java.util.LinkedHashMap::new,
-                Collectors.toList()
-        ));
-
+        java.util.Map<String, List<ProgressReportResponseDto>> groupedMap = reports.stream()
+                .map(this::mapToResponseDto)
+                .collect(Collectors.groupingBy(
+                        dto -> dto.getReportDate().format(formatter).toUpperCase(),
+                        java.util.LinkedHashMap::new,
+                        Collectors.toList()
+                ));
 
         List<GroupedProgressReportDto> result = new ArrayList<>();
         for (java.util.Map.Entry<String, List<ProgressReportResponseDto>> entry : groupedMap.entrySet()) {
@@ -213,5 +175,40 @@ public class ProgressReportServiceImpl implements ProgressReportService {
         }
 
         return result;
+    }
+
+    // MÉTODO REFACTORIZADO (Sirve para las búsquedas y para la auditoría)
+    private ProgressReportResponseDto mapToResponseDto(ProgressReport report) {
+        ProgressReportResponseDto dto = new ProgressReportResponseDto();
+        dto.setId(report.getId());
+        dto.setItemCode(report.getProjectItem().getCode());
+        dto.setItemDescription(report.getProjectItem().getDescription());
+        dto.setReportDate(report.getReportDate());
+        dto.setExecutedQuantity(report.getExecutedQuantity());
+        dto.setUnit(report.getProjectItem().getUnit());
+        dto.setObservations(report.getObservations());
+
+        if (report.getUsedResources() != null && !report.getUsedResources().isEmpty()) {
+            List<com.retrofit.backend.dto.ProgressReportResourceResponseDto> resourceDtos = report.getUsedResources().stream().map(prr -> {
+                com.retrofit.backend.dto.ProgressReportResourceResponseDto resDto = new com.retrofit.backend.dto.ProgressReportResourceResponseDto();
+                resDto.setId(prr.getId());
+                resDto.setResourceId(prr.getResource().getId());
+                resDto.setResourceName(prr.getResource().getName());
+                resDto.setResourceUnit(prr.getResource().getUnit());
+                resDto.setTheoreticalQuantity(prr.getTheoreticalQuantity());
+                resDto.setRealQuantity(prr.getRealQuantity());
+                resDto.setResourceType(prr.getResource().fetchResourceType());
+                return resDto;
+            }).collect(Collectors.toList());
+
+            dto.setUsedResources(resourceDtos);
+        }
+
+        if (report.getPhotos() != null) {
+            dto.setPhotoUrls(report.getPhotos().stream()
+                    .map(ProgressPhoto::getFileUrl)
+                    .collect(Collectors.toList()));
+        }
+        return dto;
     }
 }

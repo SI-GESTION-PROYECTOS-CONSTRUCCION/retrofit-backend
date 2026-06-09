@@ -1,10 +1,12 @@
 package com.retrofit.backend.service.impl;
 
+import com.retrofit.backend.annotation.AuditChange;
 import com.retrofit.backend.dto.ResourceRequestDto;
 import com.retrofit.backend.dto.ResourceResponseDto;
 import com.retrofit.backend.exceptions.ResourceNotFoundException;
 import com.retrofit.backend.model.Equipment;
 import com.retrofit.backend.repository.EquipmentRepository;
+import com.retrofit.backend.service.AuditService;
 import com.retrofit.backend.service.EquipmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,7 @@ import java.util.stream.Collectors;
 public class EquipmentServiceImpl implements EquipmentService {
 
     private final EquipmentRepository repository;
+    private final AuditService auditService;
 
     @Override
     public List<ResourceResponseDto> getAll() {
@@ -23,6 +26,7 @@ public class EquipmentServiceImpl implements EquipmentService {
     }
 
     @Override
+    @AuditChange(action = "CREATE", module = "Recursos")
     public ResourceResponseDto create(ResourceRequestDto dto) {
         Equipment equipment = new Equipment();
         updateEntity(equipment, dto);
@@ -33,11 +37,15 @@ public class EquipmentServiceImpl implements EquipmentService {
     public ResourceResponseDto update(Long id, ResourceRequestDto dto) {
         Equipment equipment = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Maquinaria no encontrado"));
+        ResourceResponseDto estadoAnterior = mapToDto(equipment);
         updateEntity(equipment, dto);
+        ResourceResponseDto estadoNuevo = mapToDto(equipment);
+        auditService.logAction("UPDATE", "Recursos", equipment.getId(), estadoAnterior, estadoNuevo);
         return mapToDto(repository.save(equipment));
     }
 
     @Override
+    @AuditChange(action = "DELETE", module = "Recursos")
     public void delete(Long id) {
         if (!repository.existsById(id)) throw new ResourceNotFoundException("Maquinaria no encontrado");
         // Aquí luego le pondremos una validación para no borrar si está usándose en una partida

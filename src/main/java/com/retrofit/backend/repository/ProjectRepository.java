@@ -1,8 +1,8 @@
 package com.retrofit.backend.repository;
 
 import com.retrofit.backend.model.Project;
-import com.retrofit.backend.model.ProjectPriority;
-import com.retrofit.backend.model.ProjectStatus;
+import com.retrofit.backend.enums.ProjectPriority;
+import com.retrofit.backend.enums.ProjectStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

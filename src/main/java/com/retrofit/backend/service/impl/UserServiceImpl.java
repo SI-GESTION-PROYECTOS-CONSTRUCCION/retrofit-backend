@@ -1,5 +1,6 @@
 package com.retrofit.backend.service.impl;
 
+import com.retrofit.backend.annotation.AuditChange;
 import com.retrofit.backend.dto.AdminDTO;
 import com.retrofit.backend.dto.UserCreateDTO;
 import com.retrofit.backend.dto.UserDTO;
@@ -10,6 +11,7 @@ import com.retrofit.backend.repository.AdminRepository;
 import com.retrofit.backend.repository.RoleRepository;
 import com.retrofit.backend.repository.UserRepository;
 import com.retrofit.backend.repository.WorkerRepository;
+import com.retrofit.backend.service.AuditService;
 import com.retrofit.backend.service.UserService;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
@@ -35,6 +37,8 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final RoleRepository roleRepository;
     private final WorkerRepository workerRepository;
+    private final AuditService auditService;
+
     @Override
     public UserDTO registerAdmin(AdminDTO admin) {
         if(adminRepository.findByEmail(admin.getEmail()).isPresent()){
@@ -61,6 +65,7 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
+    @AuditChange(action = "CREATE", module = "Usuarios")
     public UserDTO registerUser(UserCreateDTO dto) {
 
         RoleE roleEntity = roleRepository.findByName(dto.getRole())
@@ -106,8 +111,6 @@ public class UserServiceImpl implements UserService {
         return mapToDTO(savedUser);
     }
 
-    // En UserServiceImpl.java
-
     @Override
     public Page<UserDTO> getAllUsers(String search, String roleName, Pageable pageable) {
         String finalSearch = (search == null) ? "" : search.trim();
@@ -121,6 +124,8 @@ public class UserServiceImpl implements UserService {
     public UserDTO updateUser(long id, UserCreateDTO dto) {
         User userFound = userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con ID: " + id));
+
+        UserDTO estadoAnterior = mapToDTO(userFound);
 
         if (dto.getUsername() != null && !dto.getUsername().isBlank()) {
             if (!userFound.getUsername().equals(dto.getUsername())) {
@@ -170,10 +175,14 @@ public class UserServiceImpl implements UserService {
         });
 
         userFound.setUpdatedAt(Timestamp.valueOf(LocalDateTime.now()));
+
+        UserDTO estadoNuevo =  mapToDTO(userFound);
+        auditService.logAction("UPDATE", "Usuarios", userFound.getId(), estadoAnterior, estadoNuevo);
         return mapToDTO(userRepository.save(userFound));
     }
 
     @Override
+    @AuditChange(action = "DELETE", module = "Usuarios")
     public void deleteUser(long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));

@@ -1,5 +1,6 @@
 package com.retrofit.backend.service.impl;
 
+import com.retrofit.backend.annotation.AuditChange;
 import com.retrofit.backend.dto.PermissionDto;
 import com.retrofit.backend.dto.RoleRequestDto;
 import com.retrofit.backend.dto.RoleResponseDto;
@@ -7,6 +8,7 @@ import com.retrofit.backend.model.Permission;
 import com.retrofit.backend.model.RoleE;
 import com.retrofit.backend.repository.PermissionRepository;
 import com.retrofit.backend.repository.RoleRepository;
+import com.retrofit.backend.service.AuditService;
 import com.retrofit.backend.service.RoleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,7 @@ public class RoleServiceImpl implements RoleService {
 
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
+    private final AuditService auditService;
 
     @Transactional(readOnly = true)
     public List<RoleResponseDto> getAllRoles() {
@@ -38,6 +41,7 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Transactional
+    @AuditChange(action = "CREATE", module = "Roles")
     public RoleResponseDto createRole(RoleRequestDto dto) {
         RoleE role = new RoleE();
         role.setName(dto.getName());
@@ -55,6 +59,8 @@ public class RoleServiceImpl implements RoleService {
         RoleE role = roleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
 
+        RoleResponseDto estadoAnterior = mapToResponseDto(role);
+
         role.setName(dto.getName());
         role.setDescription(dto.getDescription());
 
@@ -62,10 +68,16 @@ public class RoleServiceImpl implements RoleService {
                 .stream().collect(Collectors.toSet());
         role.setPermissions(permissions);
 
+        RoleE savedRole = roleRepository.save(role);
+
+        RoleResponseDto estadoNuevo = mapToResponseDto(savedRole);
+        auditService.logAction("UPDATE", "Roles", savedRole.getId(), estadoAnterior, estadoNuevo);
+
         return mapToResponseDto(roleRepository.save(role));
     }
 
     @Transactional
+    @AuditChange(action = "DELETE", module = "Roles")
     public void deleteRole(Long id) {
         RoleE role = roleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado"));

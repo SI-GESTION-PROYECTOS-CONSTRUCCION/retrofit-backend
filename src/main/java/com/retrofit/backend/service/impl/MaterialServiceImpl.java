@@ -1,10 +1,12 @@
 package com.retrofit.backend.service.impl;
 
+import com.retrofit.backend.annotation.AuditChange;
 import com.retrofit.backend.dto.ResourceRequestDto;
 import com.retrofit.backend.dto.ResourceResponseDto;
 import com.retrofit.backend.exceptions.ResourceNotFoundException;
 import com.retrofit.backend.model.Material;
 import com.retrofit.backend.repository.MaterialRepository;
+import com.retrofit.backend.service.AuditService;
 import com.retrofit.backend.service.MaterialService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,7 @@ import java.util.stream.Collectors;
 public class MaterialServiceImpl implements MaterialService {
 
     private final MaterialRepository repository;
+    private final AuditService auditService;
 
     @Override
     public List<ResourceResponseDto> getAll() {
@@ -23,6 +26,7 @@ public class MaterialServiceImpl implements MaterialService {
     }
 
     @Override
+    @AuditChange(action = "CREATE", module = "Recursos")
     public ResourceResponseDto create(ResourceRequestDto dto) {
         Material material = new Material();
         updateEntity(material, dto);
@@ -33,11 +37,15 @@ public class MaterialServiceImpl implements MaterialService {
     public ResourceResponseDto update(Long id, ResourceRequestDto dto) {
         Material material = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Material no encontrado"));
+        ResourceResponseDto estadoAnterior = mapToDto(material);
         updateEntity(material, dto);
+        ResourceResponseDto estadoNuevo = mapToDto(material);
+        auditService.logAction("UPDATE", "Recursos", material.getId(), estadoAnterior, estadoNuevo);
         return mapToDto(repository.save(material));
     }
 
     @Override
+    @AuditChange(action = "DELETE", module = "Recursos")
     public void delete(Long id) {
         if (!repository.existsById(id)) throw new ResourceNotFoundException("Material no encontrado");
         // Aquí luego le pondremos una validación para no borrar si está usándose en una partida

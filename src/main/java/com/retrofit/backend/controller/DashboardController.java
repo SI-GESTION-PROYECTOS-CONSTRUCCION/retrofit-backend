@@ -4,6 +4,7 @@ import com.retrofit.backend.dto.ProjectDashboardResponseDto;
 import com.retrofit.backend.service.DashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,6 +18,7 @@ public class DashboardController {
 
     // Endpoint para el Dashboard de un proyecto específico
     @GetMapping("/project/{projectId}")
+    @PreAuthorize("hasAuthority('PROJECT_READ')")
     public ResponseEntity<ProjectDashboardResponseDto> getProjectDashboard(@PathVariable Long projectId) {
         ProjectDashboardResponseDto response = dashboardService.getProjectDashboard(projectId);
         return ResponseEntity.ok(response);
