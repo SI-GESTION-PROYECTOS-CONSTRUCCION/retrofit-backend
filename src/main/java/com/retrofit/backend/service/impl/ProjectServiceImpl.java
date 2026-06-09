@@ -1,5 +1,6 @@
 package com.retrofit.backend.service.impl;
 
+import com.retrofit.backend.annotation.AuditChange;
 import com.retrofit.backend.dto.ProjectRequestDto;
 import com.retrofit.backend.dto.ProjectResponseDto;
 import com.retrofit.backend.exceptions.ResourceNotFoundException;
@@ -9,6 +10,7 @@ import com.retrofit.backend.enums.ProjectStatus;
 import com.retrofit.backend.model.User;
 import com.retrofit.backend.repository.ProjectRepository;
 import com.retrofit.backend.repository.UserRepository;
+import com.retrofit.backend.service.AuditService;
 import com.retrofit.backend.service.ProjectService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ public class ProjectServiceImpl implements ProjectService {
 
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
+    private final AuditService auditService;
 
     @Override
     public Page<ProjectResponseDto> getAllProjects(String search, String priorityStr, String statusStr, Pageable pageable) {
@@ -54,6 +57,7 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     @Transactional
+    @AuditChange(action = "CREATE", module = "Proyectos")
     public ProjectResponseDto createProject(ProjectRequestDto dto) {
         if(projectRepository.existsByCode(dto.getCode())) {
             throw new IllegalArgumentException("Project code already exists");
@@ -69,6 +73,8 @@ public class ProjectServiceImpl implements ProjectService {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
+        ProjectResponseDto estadoAnterior = convertToDto(project);
+
         // 2. Validamos que si el usuario cambió el código, el nuevo código no le pertenezca a OTRO proyecto
         projectRepository.findByCode(dto.getCode())
                 .ifPresent(existingProject -> {
@@ -80,11 +86,14 @@ public class ProjectServiceImpl implements ProjectService {
                 });
 
         // 3. Guardamos los datos
+        ProjectResponseDto estadoNuevo = convertToDto(project);
+        auditService.logAction("UPDATE", "Proyectos", project.getId(), estadoAnterior, estadoNuevo);
         return saveProjectFromDto(project, dto);
     }
 
     @Override
     @Transactional
+    @AuditChange(action = "DELETE", module = "Proyectos")
     public void deleteProject(Long id) {
         if(!projectRepository.existsById(id)) {
             throw new ResourceNotFoundException("Project not found");
