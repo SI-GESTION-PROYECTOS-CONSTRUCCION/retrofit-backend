@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -42,5 +44,14 @@ public interface InventoryTransactionRepository extends JpaRepository<InventoryT
             "JOIN t.resource r " +
             "WHERE t.project.id = :projectId " +
             "GROUP BY t.project.id, r.id, r.name, r.unit")
-    List<StockSummaryDTO> getProjectStockSummary(@Param("projectId") Long projectId);
+    Page<StockSummaryDTO> getProjectStockSummary(@Param("projectId") Long projectId, Pageable pageable);
+
+    // 6. Obtener la suma de INGRESOS (INBOUND) para los materiales de un proyecto (Para Control de Abastecimiento)
+    @Query("SELECT r.id, SUM(t.quantity) " +
+            "FROM InventoryTransaction t " +
+            "JOIN t.resource r " +
+            "WHERE t.project.id = :projectId " +
+            "AND t.transactionType = 'INBOUND' " +
+            "GROUP BY r.id")
+    List<Object[]> getReceivedQuantityByProject(@Param("projectId") Long projectId);
 }

@@ -4,6 +4,9 @@ import com.retrofit.backend.dto.InventoryTransactionRequestDTO;
 import com.retrofit.backend.dto.InventoryTransactionResponseDTO;
 import com.retrofit.backend.dto.PlannedResourceDTO;
 import com.retrofit.backend.dto.StockSummaryDTO;
+import com.retrofit.backend.dto.SupplyControlDTO;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import com.retrofit.backend.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -56,16 +59,34 @@ public class InventoryController {
     // 5. Obtener el RESUMEN DE INVENTARIO (Todos los materiales de una obra)
     @GetMapping("/summary")
     @PreAuthorize("hasAuthority('INVENTORY_READ')")
-    public ResponseEntity<List<StockSummaryDTO>> getProjectStockSummary(
-            @RequestParam Long projectId) {
-        return ResponseEntity.ok(inventoryService.getProjectStockSummary(projectId));
+    public ResponseEntity<Page<StockSummaryDTO>> getProjectStockSummary(
+            @RequestParam Long projectId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(inventoryService.getProjectStockSummary(projectId, PageRequest.of(page, size)));
     }
 
-    // 6. Obtener lista de materiales PLANIFICADOS en el APU
     @GetMapping("/planned-materials")
     @PreAuthorize("hasAuthority('INVENTORY_READ')")
     public ResponseEntity<List<PlannedResourceDTO>> getPlannedMaterials(
             @RequestParam Long projectId) {
         return ResponseEntity.ok(inventoryService.getPlannedMaterialsForProject(projectId));
+    }
+
+    // 7. Obtener la vista gerencial de Control de Abastecimiento (Explosion vs Fisico)
+    @GetMapping("/supply-control")
+    @PreAuthorize("hasAuthority('INVENTORY_READ')")
+    public ResponseEntity<List<SupplyControlDTO>> getSupplyControl(
+            @RequestParam Long projectId) {
+        return ResponseEntity.ok(inventoryService.getSupplyControl(projectId));
+    }
+
+    // 8. Obtener cantidad consumida por partida (Para automatizacion de avance diario)
+    @GetMapping("/consumed-quantity")
+    @PreAuthorize("hasAuthority('INVENTORY_READ')")
+    public ResponseEntity<BigDecimal> getConsumedQuantity(
+            @RequestParam Long projectItemId,
+            @RequestParam Long resourceId) {
+        return ResponseEntity.ok(inventoryService.getConsumedQuantity(projectItemId, resourceId));
     }
 }

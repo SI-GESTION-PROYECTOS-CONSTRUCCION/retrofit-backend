@@ -19,6 +19,7 @@ public class InventoryTransactionResponseDTO {
     private String resourceUnit;
     private Long projectItemId;
     private String projectItemCode;
+    private String projectItemDescription;
     private TransactionType transactionType;
     private TransactionReason reason;
     private BigDecimal quantity;
