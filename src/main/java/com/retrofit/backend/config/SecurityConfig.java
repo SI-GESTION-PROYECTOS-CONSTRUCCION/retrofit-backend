@@ -33,6 +33,7 @@ public class SecurityConfig {
     @Value("${cors.allowed-origins}")
     private String allowedOrigins;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
     @Bean
     public org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer webSecurityCustomizer() {
         return (web) -> web.ignoring().requestMatchers("/public/images/**");
@@ -49,7 +50,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, CustomAccessDeniedHandler customAccessDeniedHandler) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, CustomAccessDeniedHandler customAccessDeniedHandler)
+            throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(withDefaults())
@@ -58,15 +60,13 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/auth/login",
                                 "/auth/registerAdmin",
-                                "/uploads/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
-                                "/swagger-ui.html"
-                        ).permitAll()
-                        .anyRequest().authenticated()
-                ).exceptionHandling(ex -> ex
-                        .accessDeniedHandler(customAccessDeniedHandler)
-                );
+                                "/swagger-ui.html")
+                        .permitAll()
+                        .anyRequest().authenticated())
+                .exceptionHandling(ex -> ex
+                        .accessDeniedHandler(customAccessDeniedHandler));
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -88,5 +88,3 @@ public class SecurityConfig {
         return source;
     }
 }
-
-
