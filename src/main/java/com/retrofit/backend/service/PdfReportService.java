@@ -34,7 +34,8 @@ public class PdfReportService {
         Context context = new Context();
         
         try {
-            String logoBase64 = java.nio.file.Files.readString(java.nio.file.Path.of("src/main/resources/templates/logo_base64.txt"));
+            java.io.InputStream is = new org.springframework.core.io.ClassPathResource("templates/logo_base64.txt").getInputStream();
+            String logoBase64 = new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             context.setVariable("logoBase64", logoBase64);
         } catch (Exception e) {
             context.setVariable("logoBase64", ""); // Fallback si no lo encuentra
