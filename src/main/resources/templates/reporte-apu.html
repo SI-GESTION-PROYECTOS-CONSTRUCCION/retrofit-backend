@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>Reporte APU</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 10px;
+            color: #000;
+        }
+        .header-table {
+            width: 100%;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 5px;
+        }
+        .header-title {
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .header-info {
+            width: 100%;
+            font-size: 11px;
+            margin-bottom: 15px;
+            border-collapse: collapse;
+        }
+        .header-info td {
+            padding: 2px 5px;
+        }
+        
+        .apu-container {
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+        }
+        
+        .apu-header {
+            width: 100%;
+            border-bottom: 1px solid #000;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 11px;
+        }
+        
+        .apu-yield {
+            width: 100%;
+            margin-bottom: 10px;
+            font-size: 10px;
+        }
+
+        .resource-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9px;
+            margin-bottom: 15px;
+        }
+        .resource-table th {
+            border-bottom: 1px solid #000;
+            text-align: left;
+            padding: 3px;
+        }
+        .resource-table td {
+            padding: 2px 3px;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .category-title {
+            font-weight: bold;
+            text-align: center;
+            padding: 5px 0;
+        }
+        .total-row {
+            font-weight: bold;
+            border-top: 1px dashed #000;
+        }
+    </style>
+</head>
+<body>
+
+    <table class="header-table">
+        <tr>
+            <td style="width: 20%;">
+                <img th:if="${logoBase64 != ''}" th:src="${logoBase64}" style="width: 150px; height: auto;" />
+            </td>
+            <td style="width: 60%;" class="header-title">
+                Análisis de precios unitarios
+            </td>
+            <td style="width: 20%; text-align: right;">
+                Página : <span style="page-break-after: always; counter-increment: page;">1</span>
+            </td>
+        </tr>
+    </table>
+
+    <table class="header-info">
+        <tr>
+            <td style="width: 15%;">Presupuesto</td>
+            <td th:text="${project.code + ' ' + project.name}" style="font-weight: bold;">0301165 MEJORAMIENTO...</td>
+        </tr>
+        <tr>
+            <td>Fecha presupuesto</td>
+            <td th:text="${currentDate}" style="font-weight: bold;">01/03/2021</td>
+        </tr>
+    </table>
+
+    <div th:each="item : ${items}" class="apu-container">
+        <!-- Partida Header -->
+        <table class="apu-header">
+            <tr>
+                <td style="width: 15%;">Partida</td>
+                <td th:text="${item.code + '   ' + item.description}">01.01.01 ALMACÉN</td>
+            </tr>
+        </table>
+        
+        <table class="apu-yield">
+            <tr>
+                <td style="width: 15%;">Rendimiento</td>
+                <td th:text="${item.unit + '/DIA    MO. ' + #numbers.formatDecimal(item.laborYield, 1, 4) + '    EQ. ' + #numbers.formatDecimal(item.equipmentYield, 1, 4)}">m2/DIA MO 8.0000 EQ 8.0000</td>
+                <td class="text-right" style="width: 40%;">Costo unitario directo por : <span th:text="${item.unit}"></span></td>
+                <td class="text-right" style="width: 15%; font-weight: bold;" th:text="${#numbers.formatDecimal(item.unitPrice, 1, 2)}">53.99</td>
+            </tr>
+        </table>
+
+        <!-- Resources Table -->
+        <table class="resource-table">
+            <thead>
+                <tr>
+                    <th style="width: 12%;">Código</th>
+                    <th style="width: 40%;">Descripción Recurso</th>
+                    <th style="width: 8%;">Unidad</th>
+                    <th style="width: 10%;" class="text-right">Cuadrilla</th>
+                    <th style="width: 10%;" class="text-right">Cantidad</th>
+                    <th style="width: 10%;" class="text-right">Precio S/.</th>
+                    <th style="width: 10%;" class="text-right">Parcial S/.</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Mano de Obra -->
+                <tr th:if="${#lists.size(item.apuDetails.?[resourceType == 'LABOR']) > 0}">
+                    <td></td>
+                    <td class="category-title">Mano de Obra</td>
+                    <td colspan="5"></td>
+                </tr>
+                <tr th:each="res : ${item.apuDetails}" th:if="${res.resourceType == 'LABOR'}">
+                    <td>0147010000</td>
+                    <td th:text="${res.resourceName}">PEON</td>
+                    <td th:text="${res.resourceUnit}">hh</td>
+                    <td class="text-right" th:text="${#numbers.formatDecimal(res.squad, 1, 4)}">1.0000</td>
+                    <td class="text-right" th:text="${#numbers.formatDecimal(res.quantity, 1, 4)}">1.0000</td>
+                    <td class="text-right" th:text="${#numbers.formatDecimal(res.resourceBasePrice, 1, 2)}">17.17</td>
+                    <td class="text-right" th:text="${#numbers.formatDecimal(res.partialPrice, 1, 2)}">17.17</td>
+                </tr>
+                <tr th:if="${#lists.size(item.apuDetails.?[resourceType == 'LABOR']) > 0}">
+                    <td colspan="6"></td>
+                    <td class="text-right total-row" th:text="${#numbers.formatDecimal(#aggregates.sum(item.apuDetails.?[resourceType == 'LABOR'].![partialPrice]), 1, 2)}">41.24</td>
+                </tr>
+
+                <!-- Materiales -->
+                <tr th:if="${#lists.size(item.apuDetails.?[resourceType == 'MATERIAL']) > 0}">
+                    <td></td>
+                    <td class="category-title">Materiales</td>
+                    <td colspan="5"></td>
+                </tr>
+                <tr th:each="res : ${item.apuDetails}" th:if="${res.resourceType == 'MATERIAL'}">
+                    <td>0202010000</td>
+                    <td th:text="${res.resourceName}">CLAVOS</td>
+                    <td th:text="${res.resourceUnit}">kg</td>
+                    <td class="text-right"></td>
+                    <td class="text-right" th:text="${#numbers.formatDecimal(res.quantity, 1, 4)}">0.2500</td>
+                    <td class="text-right" th:text="${#numbers.formatDecimal(res.resourceBasePrice, 1, 2)}">4.41</td>
+                    <td class="text-right" th:text="${#numbers.formatDecimal(res.partialPrice, 1, 2)}">1.10</td>
+                </tr>
+                <tr th:if="${#lists.size(item.apuDetails.?[resourceType == 'MATERIAL']) > 0}">
+                    <td colspan="6"></td>
+                    <td class="text-right total-row" th:text="${#numbers.formatDecimal(#aggregates.sum(item.apuDetails.?[resourceType == 'MATERIAL'].![partialPrice]), 1, 2)}">12.75</td>
+                </tr>
+
+                <!-- Equipos -->
+                <tr th:if="${#lists.size(item.apuDetails.?[resourceType == 'EQUIPMENT']) > 0}">
+                    <td></td>
+                    <td class="category-title">Equipos</td>
+                    <td colspan="5"></td>
+                </tr>
+                <tr th:each="res : ${item.apuDetails}" th:if="${res.resourceType == 'EQUIPMENT'}">
+                    <td>0348010000</td>
+                    <td th:text="${res.resourceName}">MEZCLADORA</td>
+                    <td th:text="${res.resourceUnit}">hm</td>
+                    <td class="text-right" th:text="${#numbers.formatDecimal(res.squad, 1, 4)}">0.3330</td>
+                    <td class="text-right" th:text="${#numbers.formatDecimal(res.quantity, 1, 4)}">1.3320</td>
+                    <td class="text-right" th:text="${#numbers.formatDecimal(res.resourceBasePrice, 1, 2)}">20.00</td>
+                    <td class="text-right" th:text="${#numbers.formatDecimal(res.partialPrice, 1, 2)}">26.64</td>
+                </tr>
+                <tr th:if="${#lists.size(item.apuDetails.?[resourceType == 'EQUIPMENT']) > 0}">
+                    <td colspan="6"></td>
+                    <td class="text-right total-row" th:text="${#numbers.formatDecimal(#aggregates.sum(item.apuDetails.?[resourceType == 'EQUIPMENT'].![partialPrice]), 1, 2)}">26.64</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</body>
+</html>
