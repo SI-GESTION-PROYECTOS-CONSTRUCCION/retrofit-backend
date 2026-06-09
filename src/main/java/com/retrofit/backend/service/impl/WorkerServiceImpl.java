@@ -1,5 +1,6 @@
 package com.retrofit.backend.service.impl;
 
+import com.retrofit.backend.annotation.AuditChange;
 import com.retrofit.backend.dto.UserCreateDTO;
 import com.retrofit.backend.dto.UserDTO;
 import com.retrofit.backend.dto.WorkerCreateDTO;
@@ -8,6 +9,7 @@ import com.retrofit.backend.model.User;
 import com.retrofit.backend.model.Worker;
 import com.retrofit.backend.repository.UserRepository;
 import com.retrofit.backend.repository.WorkerRepository;
+import com.retrofit.backend.service.AuditService;
 import com.retrofit.backend.service.UserService;
 import com.retrofit.backend.service.WorkerService;
 import jakarta.persistence.EntityNotFoundException;
@@ -28,10 +30,12 @@ public class WorkerServiceImpl implements WorkerService {
     private final WorkerRepository workerRepository;
     private final UserRepository userRepository;
     private final UserService userService;
+    private final AuditService auditService;
 
 
     @Override
     @Transactional
+    @AuditChange(action = "CREATE", module = "Trabajadores")
     public WorkerDTO createWorker(WorkerCreateDTO dto) {
 
         if (workerRepository.existsByDni(dto.getDni())) {
@@ -88,6 +92,8 @@ public class WorkerServiceImpl implements WorkerService {
         Worker worker = workerRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Trabajador no encontrado"));
 
+        WorkerDTO estadoAnterior = mapToDTO(worker);
+
         if (dto.getDni() != null && !dto.getDni().isBlank() && !dto.getDni().equals(worker.getDni())) {
             if (workerRepository.existsByDni(dto.getDni())) {
                 throw new IllegalArgumentException("Worker DNI already exists");
@@ -119,7 +125,10 @@ public class WorkerServiceImpl implements WorkerService {
 
             userRepository.saveAndFlush(user);
         }
-        return mapToDTO(worker);
+
+        WorkerDTO estadoNuevo = mapToDTO(worker);
+        auditService.logAction("UPDATE", "Trabajadores", worker.getId(), estadoAnterior, estadoNuevo);
+        return estadoNuevo;
     }
 
     @Override
@@ -144,6 +153,7 @@ public class WorkerServiceImpl implements WorkerService {
     }
 
     @Override
+    @AuditChange(action = "DELETE", module = "Trabajadores")
     public void deleteWorker(Long id) {
         Worker worker = workerRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Trabajador no encontrado"));
