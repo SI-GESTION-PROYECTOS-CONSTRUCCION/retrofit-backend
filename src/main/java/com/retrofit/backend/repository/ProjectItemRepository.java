@@ -7,7 +7,10 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
+import org.springframework.data.jpa.repository.EntityGraph;
+
 public interface ProjectItemRepository extends JpaRepository<ProjectItem, Long> {
+    @EntityGraph(attributePaths = {"apuDetails", "apuDetails.resource"})
     List<ProjectItem> findByProjectIdOrderByItemOrderAsc(Long projectId);
     List<ProjectItem> findByPredecessorId(Long predecessorId);
 
