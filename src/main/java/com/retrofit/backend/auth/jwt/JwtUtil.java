@@ -1,6 +1,7 @@
 package com.retrofit.backend.auth.jwt;
 
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
@@ -50,6 +51,14 @@ public class JwtUtil {
                 .parseClaimsJws(token)
                 .getBody()
                 .getSubject();
+    }
+
+    public String extractUsernameFromExpiredToken(String token) {
+        try {
+            return extractUsername(token);
+        } catch (ExpiredJwtException e) {
+            return e.getClaims().getSubject();
+        }
     }
 
     public boolean validateToken(String token, UserDetails userDetails) {
