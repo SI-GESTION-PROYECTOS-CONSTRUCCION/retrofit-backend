@@ -30,6 +30,12 @@ public class ProjectItemServiceImpl implements ProjectItemService {
 
         List<ProjectItem> items = itemRepository.findByProjectIdOrderByItemOrderAsc(projectId);
 
+        List<Object[]> executedResults = reportRepository.sumExecutedQuantityByProjectIdGroupedByItemId(projectId);
+        Map<Long, Double> executedMap = new HashMap<>();
+        for (Object[] result : executedResults) {
+            executedMap.put((Long) result[0], ((Number) result[1]).doubleValue());
+        }
+
         return items.stream().map(item -> {
             ProjectItemResponseDto dto = new ProjectItemResponseDto();
             dto.setId(item.getId());
@@ -63,8 +69,8 @@ public class ProjectItemServiceImpl implements ProjectItemService {
                 dto.setApuDetails(new ArrayList<>());
             }
 
-            Double executed = reportRepository.sumExecutedQuantityByItemId(item.getId());
-            dto.setExecutedQuantity(executed != null ? executed : 0.0);
+            Double executed = executedMap.getOrDefault(item.getId(), 0.0);
+            dto.setExecutedQuantity(executed);
 
             return dto;
         }).collect(Collectors.toList());
@@ -80,10 +86,20 @@ public class ProjectItemServiceImpl implements ProjectItemService {
         int[] counters = new int[10];
         double calculatedTotalBudget = 0.0;
 
+        List<Long> itemIds = dtos.stream()
+                .map(ProjectItemRequestDto::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        Map<Long, ProjectItem> existingItemsMap = new HashMap<>();
+        if (!itemIds.isEmpty()) {
+            itemRepository.findAllById(itemIds).forEach(item -> existingItemsMap.put(item.getId(), item));
+        }
+
         for (ProjectItemRequestDto dto : dtos) {
             ProjectItem item;
             if (dto.getId() != null) {
-                item = itemRepository.findById(dto.getId()).orElse(new ProjectItem());
+                item = existingItemsMap.getOrDefault(dto.getId(), new ProjectItem());
             } else {
                 item = new ProjectItem();
             }
@@ -294,17 +310,29 @@ public class ProjectItemServiceImpl implements ProjectItemService {
         item.setStartDate(dto.getStartDate());
         item.setEndDate(dto.getEndDate());
         item.setPredecessorId(dto.getPredecessorId());
-        itemRepository.save(item);
+        
+        List<ProjectItem> modifiedItems = new ArrayList<>();
+        modifiedItems.add(item);
 
-        // 3. EFECTO DOMINÓ: Si la barra se movió (daysShifted != 0), empujamos a sus hijas
+        // 3. EFECTO DOMINÓ: Si la barra se movió (daysShifted != 0), empujamos a sus hijas en memoria
         if (daysShifted != 0) {
-            cascadeDateShift(item.getId(), daysShifted);
+            List<ProjectItem> allProjectItems = itemRepository.findByProjectId(item.getProject().getId());
+            
+            Map<Long, List<ProjectItem>> childrenGraph = new HashMap<>();
+            for (ProjectItem pi : allProjectItems) {
+                if (pi.getPredecessorId() != null) {
+                    childrenGraph.computeIfAbsent(pi.getPredecessorId(), k -> new ArrayList<>()).add(pi);
+                }
+            }
+
+            cascadeDateShiftInMemory(item.getId(), daysShifted, childrenGraph, modifiedItems);
         }
+        
+        itemRepository.saveAll(modifiedItems);
     }
 
-    // Método recursivo para empujar a los hijos, y a los hijos de los hijos
-    private void cascadeDateShift(Long parentId, long daysShifted) {
-        List<ProjectItem> children = itemRepository.findByPredecessorId(parentId);
+    private void cascadeDateShiftInMemory(Long parentId, long daysShifted, Map<Long, List<ProjectItem>> childrenGraph, List<ProjectItem> modifiedItems) {
+        List<ProjectItem> children = childrenGraph.getOrDefault(parentId, Collections.emptyList());
 
         for (ProjectItem child : children) {
             if (child.getStartDate() != null) {
@@ -313,10 +341,10 @@ public class ProjectItemServiceImpl implements ProjectItemService {
             if (child.getEndDate() != null) {
                 child.setEndDate(child.getEndDate().plusDays(daysShifted));
             }
-            itemRepository.save(child);
+            modifiedItems.add(child);
 
             // Si este hijo tiene otras partidas amarradas a él, la cascada continúa
-            cascadeDateShift(child.getId(), daysShifted);
+            cascadeDateShiftInMemory(child.getId(), daysShifted, childrenGraph, modifiedItems);
         }
     }
 
@@ -334,6 +362,8 @@ public class ProjectItemServiceImpl implements ProjectItemService {
         Long prevLeafItemId = null; // Guardará solo IDs de tareas "hijas"
 
         // 1. AUTO-LINKER: Solo para tareas reales (que tienen metrado)
+        List<ProjectItem> itemsToUpdate = new ArrayList<>();
+        
         for (ProjectItem item : items) {
             boolean isParent = (item.getTotalQuantity() == null || item.getTotalQuantity() == 0);
 
@@ -346,11 +376,15 @@ public class ProjectItemServiceImpl implements ProjectItemService {
                 item.setStartDate(currentDate);
                 item.setEndDate(currentDate.plusDays(baseDays));
                 item.setPredecessorId(prevLeafItemId); // Solo se amarra a la hija anterior
-                itemRepository.save(item);
+                itemsToUpdate.add(item);
 
                 currentDate = item.getEndDate();
                 prevLeafItemId = item.getId();
             }
+        }
+        
+        if (!itemsToUpdate.isEmpty()) {
+            itemRepository.saveAll(itemsToUpdate);
         }
 
         // 2. MAPEO CON JERARQUÍA (Padres e Hijos)

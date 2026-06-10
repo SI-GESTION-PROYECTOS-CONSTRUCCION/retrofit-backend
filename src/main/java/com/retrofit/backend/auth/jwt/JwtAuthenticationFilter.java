@@ -31,6 +31,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final List<String> PUBLIC_URLS = List.of(
             "/auth/login",
             "/auth/registerAdmin",
+            "/auth/refresh",
             "/public/**"
     );
 
@@ -55,7 +56,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             jwt = authHeader.substring(7);
-            username = jwtUtil.extractUsername(jwt);
+            try {
+                username = jwtUtil.extractUsername(jwt);
+            } catch (io.jsonwebtoken.ExpiredJwtException e) {
+                // Token expirado, Spring Security lo bloqueará y devolverá 401/403
+                // a menos que sea una ruta pública como /auth/refresh
+            } catch (Exception e) {
+                // Otros errores de JWT
+            }
         }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
