@@ -348,6 +348,25 @@ public class ProjectItemServiceImpl implements ProjectItemService {
         }
     }
 
+    private void cascadeDateShift(Long parentId, long daysShifted) {
+        ProjectItem item = itemRepository.findById(parentId).orElse(null);
+        if (item == null) return;
+        List<ProjectItem> allProjectItems = itemRepository.findByProjectId(item.getProject().getId());
+        
+        Map<Long, List<ProjectItem>> childrenGraph = new HashMap<>();
+        for (ProjectItem pi : allProjectItems) {
+            if (pi.getPredecessorId() != null) {
+                childrenGraph.computeIfAbsent(pi.getPredecessorId(), k -> new ArrayList<>()).add(pi);
+            }
+        }
+        
+        List<ProjectItem> modifiedItems = new ArrayList<>();
+        cascadeDateShiftInMemory(parentId, daysShifted, childrenGraph, modifiedItems);
+        if (!modifiedItems.isEmpty()) {
+            itemRepository.saveAll(modifiedItems);
+        }
+    }
+
 
     public List<GanttItemResponseDto> getGanttItems(Long projectId) {
         Project project = projectRepository.findById(projectId)
