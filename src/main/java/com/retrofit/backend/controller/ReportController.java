@@ -1,5 +1,6 @@
 package com.retrofit.backend.controller;
 
+import com.retrofit.backend.service.AuditService;
 import com.retrofit.backend.service.PdfReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ReportController {
 
     private final PdfReportService pdfReportService;
+    private final AuditService auditService;
 
     @GetMapping("/apu")
     public ResponseEntity<byte[]> downloadApuReport(@PathVariable Long projectId) {
@@ -25,6 +27,9 @@ public class ReportController {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_PDF);
             headers.setContentDispositionFormData("attachment", "reporte_apu_proyecto_" + projectId + ".pdf");
+
+            // Registrar en el log de auditoría la exportación del APU
+            auditService.logAction("EXPORT", "Presupuestos", projectId, null, "Descarga de reporte APU en PDF");
 
             return ResponseEntity.ok()
                     .headers(headers)

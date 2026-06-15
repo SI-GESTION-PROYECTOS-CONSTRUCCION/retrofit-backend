@@ -11,6 +11,8 @@ import java.time.LocalDate;
 
 @Data
 public class ProjectRequestDto {
+    public interface OnCreate {}
+
     @NotBlank(message = "El código es obligatorio")
     @Size(max = 20, message = "El código no puede exceder los 20 caracteres")
     private String code;
@@ -27,7 +29,7 @@ public class ProjectRequestDto {
     private String description;
 
     @NotNull(message = "La fecha de inicio es obligatoria")
-    @FutureOrPresent(message = "La fecha de inicio puede ser hoy o en el futuro")
+    @FutureOrPresent(message = "La fecha de inicio puede ser hoy o en el futuro", groups = OnCreate.class)
     private LocalDate startDate;
 
     @NotBlank(message = "El estado inicial es obligatorio")

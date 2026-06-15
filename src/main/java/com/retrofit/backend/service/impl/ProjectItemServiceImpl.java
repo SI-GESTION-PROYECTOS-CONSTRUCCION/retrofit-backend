@@ -1,8 +1,10 @@
 package com.retrofit.backend.service.impl;
 
 import com.retrofit.backend.dto.*;
+import com.retrofit.backend.annotation.AuditChange;
 import com.retrofit.backend.exceptions.ResourceNotFoundException;
 import com.retrofit.backend.model.*;
+import com.retrofit.backend.service.AuditService;
 import com.retrofit.backend.repository.*;
 import com.retrofit.backend.service.ProjectItemService;
 import jakarta.transaction.Transactional;
@@ -24,6 +26,7 @@ public class ProjectItemServiceImpl implements ProjectItemService {
     private final ProgressReportRepository reportRepository;
     private final ResourceRepository resourceRepository;
     private final ProjectItemResourceRepository apuRepository;
+    private final AuditService auditService;
 
     @Override
     public List<ProjectItemResponseDto> getItemsByProjectId(Long projectId) {
@@ -78,6 +81,7 @@ public class ProjectItemServiceImpl implements ProjectItemService {
 
     @Override
     @Transactional
+    @AuditChange(action = "UPDATE", module = "Presupuestos")
     public List<ProjectItemResponseDto> saveBulkItems(Long projectId, List<ProjectItemRequestDto> dtos) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado"));
@@ -149,6 +153,7 @@ public class ProjectItemServiceImpl implements ProjectItemService {
 
     @Override
     @Transactional
+    @AuditChange(action = "UPDATE", module = "Presupuestos")
     public ProjectItemResponseDto saveApuDetails(Long itemId, Double laborYield, Double equipmentYield, List<ProjectItemResourceRequestDto> dtos) {
 
         // 1. Buscamos la Partida
@@ -329,6 +334,9 @@ public class ProjectItemServiceImpl implements ProjectItemService {
         }
         
         itemRepository.saveAll(modifiedItems);
+        
+        // Registrar en el log de auditoría los cambios en el cronograma
+        auditService.logAction("UPDATE", "Gantt", itemId, null, dto);
     }
 
     private void cascadeDateShiftInMemory(Long parentId, long daysShifted, Map<Long, List<ProjectItem>> childrenGraph, List<ProjectItem> modifiedItems) {

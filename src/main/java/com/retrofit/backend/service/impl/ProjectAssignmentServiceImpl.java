@@ -7,9 +7,12 @@ import com.retrofit.backend.model.ProjectAssignment;
 import com.retrofit.backend.model.Worker;
 import com.retrofit.backend.repository.ProjectAssignmentRepository;
 import com.retrofit.backend.repository.ProjectRepository;
+import com.retrofit.backend.annotation.AuditChange;
 import com.retrofit.backend.repository.WorkerRepository;
+import com.retrofit.backend.service.AuditService;
 import com.retrofit.backend.service.ProjectAssignmentService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -25,8 +28,10 @@ public class ProjectAssignmentServiceImpl implements ProjectAssignmentService {
     private final ProjectAssignmentRepository assignmentRepository;
     private final ProjectRepository projectRepository;
     private final WorkerRepository workerRepository;
+    private final AuditService auditService;
 
     @Override
+    @AuditChange(action = "CREATE", module = "Asignaciones")
     public ProjectAssignmentDTO assignWorker(ProjectAssignmentDTO dto) {
         Project project = projectRepository.findById(dto.getProjectId())
                 .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado"));
@@ -60,12 +65,17 @@ public class ProjectAssignmentServiceImpl implements ProjectAssignmentService {
     }
 
     @Override
+    @Transactional
     public void releaseWorker(Long assignmentId) {
         ProjectAssignment assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Asignación no encontrada"));
 
+        ProjectAssignmentDTO estadoAnterior = mapToDTO(assignment);
         assignment.setActive(false);
-        assignmentRepository.save(assignment);
+        ProjectAssignment saved = assignmentRepository.save(assignment);
+        ProjectAssignmentDTO estadoNuevo = mapToDTO(saved);
+
+        auditService.logAction("DELETE", "Asignaciones", assignmentId, estadoAnterior, estadoNuevo);
     }
 
     private ProjectAssignmentDTO mapToDTO(ProjectAssignment assignment) {

@@ -10,6 +10,7 @@
     import com.retrofit.backend.model.Project;
     import com.retrofit.backend.model.ProjectItem;
     import com.retrofit.backend.model.Resource;
+    import com.retrofit.backend.annotation.AuditChange;
     import com.retrofit.backend.repository.*;
     import com.retrofit.backend.service.InventoryService;
     import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
         private final ProjectItemResourceRepository projectItemResourceRepository;
         @Override
         @Transactional
+        @AuditChange(action = "CREATE", module = "Inventario")
         public InventoryTransactionResponseDTO registerInbound(InventoryTransactionRequestDTO request) {
             Project project = projectRepository.findById(request.getProjectId())
                     .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
@@ -61,6 +63,7 @@ import org.springframework.transaction.annotation.Transactional;
 
         @Override
         @Transactional
+        @AuditChange(action = "CREATE", module = "Inventario")
         public InventoryTransactionResponseDTO registerOutbound(InventoryTransactionRequestDTO request) {
             // 1. Validar que la Partida venga en el request (Obligatorio para salidas)
             if (request.getProjectItemId() == null) {

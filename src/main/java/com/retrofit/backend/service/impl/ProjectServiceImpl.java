@@ -85,10 +85,10 @@ public class ProjectServiceImpl implements ProjectService {
                     }
                 });
 
-        // 3. Guardamos los datos
-        ProjectResponseDto estadoNuevo = convertToDto(project);
+        // 3. Guardamos los datos primero para obtener el estado nuevo real
+        ProjectResponseDto estadoNuevo = saveProjectFromDto(project, dto);
         auditService.logAction("UPDATE", "Proyectos", project.getId(), estadoAnterior, estadoNuevo);
-        return saveProjectFromDto(project, dto);
+        return estadoNuevo;
     }
 
     @Override

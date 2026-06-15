@@ -6,7 +6,9 @@ import com.retrofit.backend.enums.ProjectPriority;
 import com.retrofit.backend.enums.ProjectStatus;
 import com.retrofit.backend.service.ProjectService;
 import jakarta.validation.Valid;
+import jakarta.validation.groups.Default;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -72,7 +74,7 @@ public class ProjectController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('PROJECT_CREATE')")
-    public ResponseEntity<ProjectResponseDto> create(@Valid @RequestBody ProjectRequestDto dto) {
+    public ResponseEntity<ProjectResponseDto> create(@Validated({Default.class, ProjectRequestDto.OnCreate.class}) @RequestBody ProjectRequestDto dto) {
         return new ResponseEntity<>(projectService.createProject(dto), HttpStatus.CREATED);
     }
 
