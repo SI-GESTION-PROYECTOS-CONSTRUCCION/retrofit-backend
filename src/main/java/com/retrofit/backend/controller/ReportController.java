@@ -67,4 +67,24 @@ public class ReportController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
+    @GetMapping("/inventario")
+    public ResponseEntity<byte[]> downloadInventoryReport(@PathVariable Long projectId) {
+        try {
+            byte[] pdfBytes = pdfReportService.generateInventoryReport(projectId);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("attachment", "reporte_inventario_proyecto_" + projectId + ".pdf");
+
+            auditService.logAction("EXPORT", "Inventario", projectId, null, "Descarga de reporte de inventario en PDF");
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(pdfBytes);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }

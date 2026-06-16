@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>Reporte de Inventario y Kardex</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+
+        .report-title {
+            font-size: 24px;
+            font-weight: normal;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            margin-top: 0;
+        }
+
+        .table-general {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .table-general td, .table-general th {
+            border: 1px solid #000;
+            padding: 6px 10px;
+            font-size: 11px;
+        }
+
+        .header-label {
+            font-weight: bold;
+            width: 30%;
+            background-color: #f5f5f5;
+            text-transform: uppercase;
+        }
+
+        .section {
+            border: 1px solid #000;
+            border-top: none;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            background-color: #e6e6e6;
+            text-align: center;
+            font-weight: bold;
+            padding: 8px;
+            border-bottom: 1px solid #000;
+            font-size: 13px;
+            text-transform: uppercase;
+            border-top: 1px solid #000;
+        }
+
+        .table-data {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table-data th, .table-data td {
+            border: 1px solid #000;
+            padding: 6px;
+            font-size: 11px;
+        }
+
+        .table-data th {
+            background-color: #f5f5f5;
+            text-align: center;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .badge-success {
+            color: #065F46;
+            font-weight: bold;
+        }
+
+        .badge-danger {
+            color: #EF4444;
+            font-weight: bold;
+        }
+
+        .footer {
+            margin-top: 40px;
+            width: 100%;
+        }
+
+        .footer-table {
+            width: 100%;
+            border: none;
+        }
+
+        .footer-table td {
+            border: none;
+            vertical-align: top;
+            font-size: 11px;
+        }
+
+        .signature-line {
+            margin-bottom: 15px;
+            font-weight: bold;
+            text-align: right;
+        }
+
+    </style>
+</head>
+<body>
+
+    <table style="width: 100%; margin-bottom: 20px;">
+        <tr>
+            <td style="width: 20%;">
+                <img th:if="${logoBase64 != ''}" th:src="${logoBase64}" style="width: 150px; height: auto;" />
+            </td>
+            <td style="width: 80%; text-align: left; vertical-align: middle;">
+                <h1 class="report-title" style="margin-bottom: 0;">REPORTE DE INVENTARIO Y KARDEX</h1>
+            </td>
+        </tr>
+    </table>
+
+    <table class="table-general">
+        <tr>
+            <td class="header-label">NOMBRE DE LA OBRA</td>
+            <td th:text="${project.name}"></td>
+        </tr>
+        <tr>
+            <td class="header-label">NO. DE CONTRATO</td>
+            <td th:text="${project.code}"></td>
+        </tr>
+        <tr>
+            <td class="header-label">EMPRESA</td>
+            <td th:text="${project.client}"></td>
+        </tr>
+        <tr>
+            <td class="header-label">SUPERINTENDENTE</td>
+            <td th:text="${project.manager != null ? project.manager.name + ' ' + project.manager.lastName : ''}"></td>
+        </tr>
+        <tr>
+            <td class="header-label">FECHA DEL REPORTE</td>
+            <td th:text="${currentDate}"></td>
+        </tr>
+    </table>
+
+    <div class="section">
+        <div class="section-title">SECCIÓN A - RESUMEN DE STOCK ACTUAL</div>
+        <table class="table-data">
+            <thead>
+                <tr>
+                    <th style="width: 40%;">MATERIAL / RECURSO</th>
+                    <th style="width: 15%;">UND.</th>
+                    <th style="width: 25%;">STOCK FÍSICO ACTUAL</th>
+                    <th style="width: 20%;">ESTADO</th>
+                </tr>
+            </thead>
+            <tbody>
+                <th:block th:each="stock : ${stockSummary}">
+                    <tr>
+                        <td th:text="${stock.resourceName}"></td>
+                        <td class="text-center" th:text="${stock.resourceUnit}"></td>
+                        <td class="text-right" th:text="${#numbers.formatDecimal(stock.currentStock, 1, 'COMMA', 2, 'POINT')}"></td>
+                        <td class="text-center">
+                            <span th:if="${stock.currentStock > 10}" class="badge-success">ÓPTIMO</span>
+                            <span th:unless="${stock.currentStock > 10}" class="badge-danger">CRÍTICO</span>
+                        </td>
+                    </tr>
+                </th:block>
+                <tr th:if="${#lists.isEmpty(stockSummary)}">
+                    <td colspan="4" class="text-center">No hay materiales en inventario.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <div class="section-title">SECCIÓN B - HISTORIAL DE MOVIMIENTOS (KARDEX GENERAL)</div>
+        <table class="table-data">
+            <thead>
+                <tr>
+                    <th style="width: 15%;">FECHA</th>
+                    <th style="width: 10%;">TIPO</th>
+                    <th style="width: 25%;">MATERIAL / INSUMO</th>
+                    <th style="width: 10%;">CANT.</th>
+                    <th style="width: 20%;">MOTIVO</th>
+                    <th style="width: 20%;">PARTIDA DESTINO</th>
+                </tr>
+            </thead>
+            <tbody>
+                <th:block th:each="mov : ${transactions}">
+                    <tr>
+                        <td class="text-center" th:text="${#temporals.format(mov.transactionDate, 'dd/MM/yyyy HH:mm')}"></td>
+                        <td class="text-center">
+                            <span th:if="${mov.transactionType.name() == 'INBOUND'}" style="color: #10B981; font-weight: bold;">+ IN</span>
+                            <span th:if="${mov.transactionType.name() == 'OUTBOUND'}" style="color: #6B7280; font-weight: bold;">- OUT</span>
+                        </td>
+                        <td th:text="${mov.resource.name}"></td>
+                        <td class="text-right" th:text="${#numbers.formatDecimal(mov.quantity, 1, 'COMMA', 2, 'POINT')}"></td>
+                        <td th:text="${mov.reason}"></td>
+                        <td th:text="${mov.projectItem != null ? mov.projectItem.code : '--'}"></td>
+                    </tr>
+                </th:block>
+                <tr th:if="${#lists.isEmpty(transactions)}">
+                    <td colspan="6" class="text-center">No hay movimientos registrados en esta obra.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer">
+        <table class="footer-table">
+            <tr>
+                <td style="width: 50%;">
+                    <div>Reporte generado automáticamente por <strong>Retrofit</strong></div>
+                </td>
+                <td style="width: 50%;">
+                    <div class="signature-line">
+                        Firma del Almacenero/Residente: _______________________
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+</body>
+</html>

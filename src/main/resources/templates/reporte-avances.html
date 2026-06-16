@@ -146,7 +146,16 @@
 </head>
 <body>
 
-    <h1 class="report-title">REPORTE DE OBRA</h1>
+    <table style="width: 100%; margin-bottom: 20px;">
+        <tr>
+            <td style="width: 20%;">
+                <img th:if="${logoBase64 != ''}" th:src="${logoBase64}" style="width: 150px; height: auto;" />
+            </td>
+            <td style="width: 80%; text-align: left; vertical-align: middle;">
+                <h1 class="report-title" style="margin-bottom: 0;">REPORTE DE OBRA</h1>
+            </td>
+        </tr>
+    </table>
 
     <table class="table-general">
         <tr>

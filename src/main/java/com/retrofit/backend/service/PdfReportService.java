@@ -14,6 +14,10 @@ import org.jsoup.nodes.Document;
 import java.io.ByteArrayOutputStream;
 import com.retrofit.backend.dto.GroupedProgressReportDto;
 import com.retrofit.backend.dto.ProgressReportResponseDto;
+import com.retrofit.backend.dto.StockSummaryDTO;
+import com.retrofit.backend.model.InventoryTransaction;
+import com.retrofit.backend.repository.InventoryTransactionRepository;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -28,6 +32,7 @@ public class PdfReportService {
     private final ProjectItemService projectItemService;
     private final ProjectRepository projectRepository;
     private final ProgressReportService progressReportService; // Add dependency
+    private final InventoryTransactionRepository inventoryTransactionRepository;
 
     public byte[] generateApuReport(Long projectId) throws Exception {
         // 1. Obtener datos
@@ -37,14 +42,7 @@ public class PdfReportService {
         List<ProjectItemResponseDto> items = projectItemService.getItemsByProjectId(projectId);
 
         Context context = new Context();
-        
-        try {
-            java.io.InputStream is = new org.springframework.core.io.ClassPathResource("templates/logo_base64.txt").getInputStream();
-            String logoBase64 = new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
-            context.setVariable("logoBase64", logoBase64);
-        } catch (Exception e) {
-            context.setVariable("logoBase64", ""); // Fallback si no lo encuentra
-        }
+        context.setVariable("logoBase64", getLogoBase64());
         
         context.setVariable("project", project);
         context.setVariable("items", items);
@@ -86,6 +84,7 @@ public class PdfReportService {
         }
 
         Context context = new Context();
+        context.setVariable("logoBase64", getLogoBase64());
         context.setVariable("project", project);
         context.setVariable("flatReports", flatReports);
         context.setVariable("hasPhotos", hasPhotos);
@@ -108,5 +107,43 @@ public class PdfReportService {
         renderer.createPDF(outputStream);
 
         return outputStream.toByteArray();
+    }
+
+    public byte[] generateInventoryReport(Long projectId) throws Exception {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
+
+        List<StockSummaryDTO> stockSummary = inventoryTransactionRepository.getProjectStockSummary(projectId, Pageable.unpaged()).getContent();
+        List<InventoryTransaction> transactions = inventoryTransactionRepository.findByProjectIdOrderByTransactionDateDesc(projectId);
+
+        Context context = new Context();
+        context.setVariable("logoBase64", getLogoBase64());
+        context.setVariable("project", project);
+        context.setVariable("stockSummary", stockSummary);
+        context.setVariable("transactions", transactions);
+        context.setVariable("currentDate", LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+
+        String html = templateEngine.process("reporte-inventario", context);
+
+        Document document = Jsoup.parse(html, "UTF-8");
+        document.outputSettings().syntax(Document.OutputSettings.Syntax.xml);
+        String xhtml = document.html();
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        ITextRenderer renderer = new ITextRenderer();
+        renderer.setDocumentFromString(xhtml);
+        renderer.layout();
+        renderer.createPDF(outputStream);
+
+        return outputStream.toByteArray();
+    }
+
+    private String getLogoBase64() {
+        try {
+            java.io.InputStream is = new org.springframework.core.io.ClassPathResource("templates/logo_base64.txt").getInputStream();
+            return new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return ""; // Fallback si no lo encuentra
+        }
     }
 }
