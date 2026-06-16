@@ -12,8 +12,12 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
 import java.io.ByteArrayOutputStream;
+import com.retrofit.backend.dto.GroupedProgressReportDto;
+import com.retrofit.backend.dto.ProgressReportResponseDto;
+
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -23,6 +27,7 @@ public class PdfReportService {
     private final TemplateEngine templateEngine;
     private final ProjectItemService projectItemService;
     private final ProjectRepository projectRepository;
+    private final ProgressReportService progressReportService; // Add dependency
 
     public byte[] generateApuReport(Long projectId) throws Exception {
         // 1. Obtener datos
@@ -54,6 +59,48 @@ public class PdfReportService {
         String xhtml = document.html();
 
         // 5. Generar PDF
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        ITextRenderer renderer = new ITextRenderer();
+        renderer.setDocumentFromString(xhtml);
+        renderer.layout();
+        renderer.createPDF(outputStream);
+
+        return outputStream.toByteArray();
+    }
+
+    public byte[] generateProgressReport(Long projectId, LocalDate startDate, LocalDate endDate, String itemCode) throws Exception {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
+
+        List<GroupedProgressReportDto> groupedReports = progressReportService.getFilteredAndGroupedReports(projectId, startDate, endDate, itemCode);
+        
+        List<ProgressReportResponseDto> flatReports = new ArrayList<>();
+        boolean hasPhotos = false;
+        for (GroupedProgressReportDto group : groupedReports) {
+            flatReports.addAll(group.getReports());
+            for(ProgressReportResponseDto report : group.getReports()) {
+                if(report.getPhotoUrls() != null && !report.getPhotoUrls().isEmpty()) {
+                    hasPhotos = true;
+                }
+            }
+        }
+
+        Context context = new Context();
+        context.setVariable("project", project);
+        context.setVariable("flatReports", flatReports);
+        context.setVariable("hasPhotos", hasPhotos);
+        
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        context.setVariable("startDateStr", startDate != null ? startDate.format(formatter) : "[DD/MM/AAAA]");
+        context.setVariable("endDateStr", endDate != null ? endDate.format(formatter) : "[DD/MM/AAAA]");
+        context.setVariable("currentDate", LocalDate.now().format(formatter));
+
+        String html = templateEngine.process("reporte-avances", context);
+
+        Document document = Jsoup.parse(html, "UTF-8");
+        document.outputSettings().syntax(Document.OutputSettings.Syntax.xml);
+        String xhtml = document.html();
+
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         ITextRenderer renderer = new ITextRenderer();
         renderer.setDocumentFromString(xhtml);

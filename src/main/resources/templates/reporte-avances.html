@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>Reporte de Obra</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+
+        .report-title {
+            font-size: 24px;
+            font-weight: normal;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            margin-top: 0;
+        }
+
+        .table-general {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 0;
+        }
+
+        .table-general td, .table-general th {
+            border: 1px solid #000;
+            padding: 6px 10px;
+            font-size: 11px;
+        }
+
+        .header-label {
+            font-weight: bold;
+            width: 30%;
+            background-color: #f5f5f5;
+            text-transform: uppercase;
+        }
+
+        .section {
+            border: 1px solid #000;
+            border-top: none;
+        }
+
+        .section-title {
+            background-color: #e6e6e6;
+            text-align: center;
+            font-weight: bold;
+            padding: 8px;
+            border-bottom: 1px solid #000;
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+
+        .section-body {
+            padding: 15px;
+            min-height: 150px;
+        }
+
+        .period-text {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .photos-container {
+            text-align: center;
+        }
+        
+        .photo-item {
+            display: inline-block;
+            width: 180px;
+            margin: 5px;
+            vertical-align: top;
+        }
+        
+        .photo-img {
+            width: 100%;
+            max-height: 150px;
+            object-fit: contain;
+            border: 1px solid #ccc;
+        }
+        
+        .photo-caption {
+            font-size: 9px;
+            margin-top: 3px;
+        }
+
+        .table-activities {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table-activities th, .table-activities td {
+            border: 1px solid #000;
+            padding: 6px;
+            font-size: 11px;
+        }
+
+        .table-activities th {
+            background-color: #e6e6e6;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .tarea-col {
+            width: 50%;
+            text-align: left;
+            background-color: #fff !important;
+        }
+
+        .sub-header {
+            background-color: #e6e6e6;
+            font-weight: bold;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+
+        .footer {
+            margin-top: 40px;
+            width: 100%;
+        }
+
+        .footer-table {
+            width: 100%;
+            border: none;
+        }
+
+        .footer-table td {
+            border: none;
+            vertical-align: top;
+            font-size: 11px;
+        }
+
+        .signature-line {
+            margin-bottom: 15px;
+            font-weight: bold;
+            text-align: right;
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1 class="report-title">REPORTE DE OBRA</h1>
+
+    <table class="table-general">
+        <tr>
+            <td class="header-label">NOMBRE DE LA OBRA</td>
+            <td th:text="${project.name}"></td>
+        </tr>
+        <tr>
+            <td class="header-label">NO. DE CONTRATO</td>
+            <td th:text="${project.code}"></td>
+        </tr>
+        <tr>
+            <td class="header-label">EMPRESA</td>
+            <td th:text="${project.client}"></td>
+        </tr>
+        <tr>
+            <td class="header-label">SUPERINTENDENTE</td>
+            <td th:text="${project.manager != null ? project.manager.name + ' ' + project.manager.lastName : ''}"></td>
+        </tr>
+        <tr>
+            <td class="header-label">MONTO DEL CONTRATO</td>
+            <td th:text="${'S/' + #numbers.formatDecimal(project.totalBudget, 1, 'COMMA', 2, 'POINT')}"></td>
+        </tr>
+    </table>
+
+    <div class="section">
+        <div class="section-title">AVANCES</div>
+        <div class="section-body">
+            <div class="period-text">
+                Periodo de Ejecución: <span th:text="${startDateStr}">[DD/MM/AAAA]</span> al <span th:text="${endDateStr}">[DD/MM/AAAA]</span>
+            </div>
+            
+            <div class="photos-container">
+                <th:block th:if="${#lists.isEmpty(flatReports)}">
+                    <p style="text-align: left; font-weight: normal; font-size: 11px;">[UTILIZA ESTE ESPACIO PARA MOSTRAR PORCENTAJES DE AVANCE O IMÁGENES QUE ILUSTREN LAS ACTIVIDADES REALIZADAS EN EL PERIODO QUE CUBRE EL REPORTE]</p>
+                </th:block>
+                <th:block th:unless="${#lists.isEmpty(flatReports)}">
+                    <th:block th:each="report : ${flatReports}">
+                        <th:block th:each="photo : ${report.photoUrls}">
+                            <!-- Note: Flying Saucer requires absolute file:// or base64 data URIs. 
+                                 If photoUrls are full HTTP URLs, Flying Saucer might need configuration to fetch them. 
+                                 For now, we render an img tag. 
+                            -->
+                            <div class="photo-item">
+                                <img th:src="${photo}" class="photo-img"/>
+                                <div class="photo-caption" th:text="${report.itemCode + ' - ' + report.itemDescription}"></div>
+                            </div>
+                        </th:block>
+                    </th:block>
+                    <p style="font-style: italic; font-size: 10px; margin-top: 10px;" th:if="${hasPhotos == false}">No hay imágenes registradas para este periodo.</p>
+                </th:block>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">ACTIVIDADES REALIZADAS</div>
+        <table class="table-activities">
+            <thead>
+                <tr>
+                    <th rowspan="2" class="tarea-col">TAREA</th>
+                    <th>INICIO</th>
+                    <th rowspan="2" style="width: 30%;">OBSERVACIONES</th>
+                </tr>
+                <tr>
+                    <th class="sub-header">FECHA</th>
+                </tr>
+            </thead>
+            <tbody>
+                <th:block th:each="report : ${flatReports}">
+                    <tr>
+                        <td>
+                            <span th:text="${report.itemCode + ' - ' + report.itemDescription}"></span><br/>
+                            <span style="color: #555; font-size: 9px;" th:text="${'Avance: ' + report.executedQuantity + ' ' + report.unit}"></span>
+                        </td>
+                        <td class="text-center" th:text="${#temporals.format(report.reportDate, 'dd/MM/yyyy')}"></td>
+                        <td th:text="${report.observations}"></td>
+                    </tr>
+                </th:block>
+                
+                <!-- Print some empty rows to fill the table if needed -->
+                <tr th:each="i : ${#numbers.sequence(1, 5)}" th:if="${#lists.size(flatReports) < 5}">
+                    <td>&nbsp;</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer">
+        <table class="footer-table">
+            <tr>
+                <td style="width: 50%;">
+                    <div>No. de Reporte: <strong>____</strong></div>
+                    <div style="margin-top: 5px;">Fecha: <strong th:text="${currentDate}"></strong></div>
+                </td>
+                <td style="width: 50%;">
+                    <div class="signature-line">
+                        Firma del Superintendente: _______________________
+                    </div>
+                    <div class="signature-line">
+                        Firma del Solicitante: _______________________
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+</body>
+</html>
