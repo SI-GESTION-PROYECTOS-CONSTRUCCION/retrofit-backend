@@ -21,6 +21,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 
     import java.math.BigDecimal;
+    import java.time.LocalDate;
     import java.time.LocalDateTime;
     import java.util.List;
 
@@ -167,7 +168,12 @@ import org.springframework.transaction.annotation.Transactional;
 
         @Override
         @Transactional(readOnly = true)
-        public BigDecimal getConsumedQuantity(Long projectItemId, Long resourceId) {
+        public BigDecimal getConsumedQuantity(Long projectItemId, Long resourceId, LocalDate date) {
+            if (date != null) {
+                LocalDateTime start = date.atStartOfDay();
+                LocalDateTime end = date.plusDays(1).atStartOfDay();
+                return transactionRepository.calculateConsumedQuantityByProjectItemAndDate(projectItemId, resourceId, start, end);
+            }
             return transactionRepository.calculateConsumedQuantityByProjectItem(projectItemId, resourceId);
         }
 

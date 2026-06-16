@@ -7,6 +7,7 @@ import com.retrofit.backend.dto.StockSummaryDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import com.retrofit.backend.dto.SupplyControlDTO;
 import java.util.List;
@@ -19,5 +20,5 @@ public interface InventoryService {
     List<InventoryTransactionResponseDTO> getKardex(Long projectId, Long resourceId);
     List<PlannedResourceDTO> getPlannedMaterialsForProject(Long projectId);
     List<SupplyControlDTO> getSupplyControl(Long projectId);
-    BigDecimal getConsumedQuantity(Long projectItemId, Long resourceId);
+    BigDecimal getConsumedQuantity(Long projectItemId, Long resourceId, LocalDate date);
 }

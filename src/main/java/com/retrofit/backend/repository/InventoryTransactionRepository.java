@@ -31,6 +31,17 @@ public interface InventoryTransactionRepository extends JpaRepository<InventoryT
             "AND t.transactionType = 'OUTBOUND'")
     BigDecimal calculateConsumedQuantityByProjectItem(@Param("projectItemId") Long projectItemId, @Param("resourceId") Long resourceId);
 
+    @Query("SELECT COALESCE(SUM(t.quantity), 0) FROM InventoryTransaction t " +
+            "WHERE t.projectItem.id = :projectItemId " +
+            "AND t.resource.id = :resourceId " +
+            "AND t.transactionType = 'OUTBOUND' " +
+            "AND t.transactionDate >= :startDate AND t.transactionDate < :endDate")
+    BigDecimal calculateConsumedQuantityByProjectItemAndDate(
+            @Param("projectItemId") Long projectItemId, 
+            @Param("resourceId") Long resourceId, 
+            @Param("startDate") java.time.LocalDateTime startDate,
+            @Param("endDate") java.time.LocalDateTime endDate);
+
     // 4. Obtener todas las transacciones de un proyecto (Para reportes)
     List<InventoryTransaction> findByProjectIdOrderByTransactionDateDesc(Long projectId);
 

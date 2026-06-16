@@ -15,7 +15,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
+import org.springframework.format.annotation.DateTimeFormat;
 
 @RestController
 @RequestMapping("/inventory")
@@ -86,7 +88,8 @@ public class InventoryController {
     @PreAuthorize("hasAuthority('INVENTORY_READ')")
     public ResponseEntity<BigDecimal> getConsumedQuantity(
             @RequestParam Long projectItemId,
-            @RequestParam Long resourceId) {
-        return ResponseEntity.ok(inventoryService.getConsumedQuantity(projectItemId, resourceId));
+            @RequestParam Long resourceId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(inventoryService.getConsumedQuantity(projectItemId, resourceId, date));
     }
 }
