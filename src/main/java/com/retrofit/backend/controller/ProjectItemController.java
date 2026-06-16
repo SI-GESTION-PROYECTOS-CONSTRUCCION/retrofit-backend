@@ -45,9 +45,9 @@ public class ProjectItemController {
     @PreAuthorize("hasAuthority('PROJECT_CREATE')")
     public ResponseEntity<List<ProjectItemResponseDto>> createBulkItems(
             @PathVariable Long projectId,
-            @RequestBody @Valid List<ProjectItemRequestDto> dtos) {
+            @RequestBody @Valid BudgetSaveRequestDto request) {
 
-        List<ProjectItemResponseDto> savedItems = itemService.saveBulkItems(projectId, dtos);
+        List<ProjectItemResponseDto> savedItems = itemService.saveBulkItems(projectId, request);
         return new ResponseEntity<>(savedItems, HttpStatus.CREATED);
     }
 

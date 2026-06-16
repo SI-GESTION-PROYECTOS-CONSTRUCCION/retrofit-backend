@@ -59,6 +59,12 @@ public class Project {
     @Column(name = "total_budget")
     private Double totalBudget = 0.0;
 
+    @Column(name = "general_expenses_percentage")
+    private Double generalExpensesPercentage = 5.0;
+
+    @Column(name = "utility_percentage")
+    private Double utilityPercentage = 4.0;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

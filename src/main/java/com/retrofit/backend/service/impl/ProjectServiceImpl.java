@@ -159,6 +159,8 @@ public class ProjectServiceImpl implements ProjectService {
         dto.setPriority(project.getPriority().name());
         dto.setCurrentProgress(project.getCurrentProgress());
         dto.setTotalBudget(project.getTotalBudget());
+        dto.setGeneralExpensesPercentage(project.getGeneralExpensesPercentage());
+        dto.setUtilityPercentage(project.getUtilityPercentage());
         if(project.getManager() != null) {
             dto.setManagerId(project.getManager().getId());
             dto.setManagerFullName(project.getManager().getName() + " " + project.getManager().getLastName());

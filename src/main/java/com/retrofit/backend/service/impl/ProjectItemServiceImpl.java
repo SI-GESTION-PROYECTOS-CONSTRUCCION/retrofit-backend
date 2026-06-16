@@ -82,15 +82,22 @@ public class ProjectItemServiceImpl implements ProjectItemService {
     @Override
     @Transactional
     @AuditChange(action = "UPDATE", module = "Presupuestos")
-    public List<ProjectItemResponseDto> saveBulkItems(Long projectId, List<ProjectItemRequestDto> dtos) {
+    public List<ProjectItemResponseDto> saveBulkItems(Long projectId, BudgetSaveRequestDto request) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado"));
 
+        if (request.getGeneralExpensesPercentage() != null) {
+            project.setGeneralExpensesPercentage(request.getGeneralExpensesPercentage());
+        }
+        if (request.getUtilityPercentage() != null) {
+            project.setUtilityPercentage(request.getUtilityPercentage());
+        }
+
         List<ProjectItem> itemsToSave = new ArrayList<>();
         int[] counters = new int[10];
-        double calculatedTotalBudget = 0.0;
+        double calculatedDirectCost = 0.0;
 
-        List<Long> itemIds = dtos.stream()
+        List<Long> itemIds = request.getItems().stream()
                 .map(ProjectItemRequestDto::getId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
@@ -100,7 +107,7 @@ public class ProjectItemServiceImpl implements ProjectItemService {
             itemRepository.findAllById(itemIds).forEach(item -> existingItemsMap.put(item.getId(), item));
         }
 
-        for (ProjectItemRequestDto dto : dtos) {
+        for (ProjectItemRequestDto dto : request.getItems()) {
             ProjectItem item;
             if (dto.getId() != null) {
                 item = existingItemsMap.getOrDefault(dto.getId(), new ProjectItem());
@@ -138,14 +145,23 @@ public class ProjectItemServiceImpl implements ProjectItemService {
             }
 
             if (item.getTotalQuantity() != null && item.getUnitPrice() != null) {
-                calculatedTotalBudget += (item.getTotalQuantity() * item.getUnitPrice());
+                calculatedDirectCost += (item.getTotalQuantity() * item.getUnitPrice());
             }
 
             itemsToSave.add(item);
         }
 
         itemRepository.saveAll(itemsToSave);
-        project.setTotalBudget(calculatedTotalBudget);
+
+        double generalExpensesPercentage = project.getGeneralExpensesPercentage() != null ? project.getGeneralExpensesPercentage() : 5.0;
+        double utilityPercentage = project.getUtilityPercentage() != null ? project.getUtilityPercentage() : 4.0;
+        
+        double generalExpenses = calculatedDirectCost * (generalExpensesPercentage / 100);
+        double utility = calculatedDirectCost * (utilityPercentage / 100);
+        double subtotal = calculatedDirectCost + generalExpenses + utility;
+        double igv = subtotal * 0.18;
+        
+        project.setTotalBudget(subtotal + igv);
         projectRepository.save(project);
 
         return getItemsByProjectId(projectId);
@@ -247,13 +263,22 @@ public class ProjectItemServiceImpl implements ProjectItemService {
 
     // 5. MÉTODO PARA RECALCULAR EL PROYECTO
     private void recalculateProjectTotalBudget(Project project) {
-        double totalBudget = 0.0;
+        double directCost = 0.0;
         for (ProjectItem pi : project.getItems()) {
             if (pi.getTotalQuantity() != null && pi.getUnitPrice() != null) {
-                totalBudget += (pi.getTotalQuantity() * pi.getUnitPrice());
+                directCost += (pi.getTotalQuantity() * pi.getUnitPrice());
             }
         }
-        project.setTotalBudget(totalBudget);
+        
+        double generalExpensesPercentage = project.getGeneralExpensesPercentage() != null ? project.getGeneralExpensesPercentage() : 5.0;
+        double utilityPercentage = project.getUtilityPercentage() != null ? project.getUtilityPercentage() : 4.0;
+        
+        double generalExpenses = directCost * (generalExpensesPercentage / 100);
+        double utility = directCost * (utilityPercentage / 100);
+        double subtotal = directCost + generalExpenses + utility;
+        double igv = subtotal * 0.18;
+        
+        project.setTotalBudget(subtotal + igv);
         projectRepository.save(project);
     }
 

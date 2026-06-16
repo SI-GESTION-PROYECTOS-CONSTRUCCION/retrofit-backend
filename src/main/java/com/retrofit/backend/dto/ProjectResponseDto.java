@@ -18,5 +18,7 @@ public class ProjectResponseDto {
     private Double currentProgress;
     private Long managerId;
     private String managerFullName;
+    private Double generalExpensesPercentage;
+    private Double utilityPercentage;
     private Double totalBudget;
 }
