@@ -19,8 +19,10 @@ public class DashboardController {
     // Endpoint para el Dashboard de un proyecto específico
     @GetMapping("/project/{projectId}")
     @PreAuthorize("hasAuthority('PROJECT_READ')")
-    public ResponseEntity<ProjectDashboardResponseDto> getProjectDashboard(@PathVariable Long projectId) {
-        ProjectDashboardResponseDto response = dashboardService.getProjectDashboard(projectId);
+    public ResponseEntity<ProjectDashboardResponseDto> getProjectDashboard(
+            @PathVariable Long projectId,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Long itemId) {
+        ProjectDashboardResponseDto response = dashboardService.getProjectDashboard(projectId, itemId);
         return ResponseEntity.ok(response);
     }
 }

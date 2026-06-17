@@ -91,7 +91,6 @@ public class DataInitializer implements CommandLineRunner {
         // 8. MÓDULO: AUDITORÍA (AuditController)
         // ==========================================
         Permission auditRead   = createPermissionIfNotExists("AUDIT_READ");
-        Permission auditExport = createPermissionIfNotExists("AUDIT_EXPORT"); // Para el botón de "Exportar"
 
 
         // ==========================================
@@ -107,7 +106,7 @@ public class DataInitializer implements CommandLineRunner {
                 uCreate, uRead, uUpdate, uDelete,
                 secCreate, secRead, secUpdate, secDelete,
                 invCreate, invRead, invUpdate, invDelete,
-                auditRead, auditExport
+                auditRead
         ));
 
         // ROL: INGENIERO RESIDENTE (Control Operativo de Campo)
@@ -135,12 +134,10 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void createRoleIfNotExists(String name, String description, Set<Permission> permissions) {
-        if (roleRepository.findByName(name).isEmpty()) {
-            RoleE role = new RoleE();
-            role.setName(name);
-            role.setDescription(description);
-            role.setPermissions(permissions); // Inserta la lista de permisos en la tabla intermedia
-            roleRepository.save(role);
-        }
+        RoleE role = roleRepository.findByName(name).orElse(new RoleE());
+        role.setName(name);
+        role.setDescription(description);
+        role.setPermissions(permissions); // Inserta o actualiza la lista de permisos en la tabla intermedia
+        roleRepository.save(role);
     }
 }

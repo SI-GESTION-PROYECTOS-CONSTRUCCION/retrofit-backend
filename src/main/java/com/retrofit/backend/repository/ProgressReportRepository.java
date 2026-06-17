@@ -31,8 +31,8 @@ public interface ProgressReportRepository extends JpaRepository<ProgressReport, 
         @Query("SELECT COALESCE(SUM(pr.executedQuantity * pi.unitPrice), 0.0) " +
                         "FROM ProgressReport pr " +
                         "JOIN pr.projectItem pi " +
-                        "WHERE pi.project.id = :projectId")
-        Double calculateEarnedValueByProjectId(@Param("projectId") Long projectId);
+                        "WHERE pi.project.id = :projectId AND (:exactCode IS NULL OR pi.code = :exactCode OR pi.code LIKE :prefixCode)")
+        Double calculateEarnedValueByProjectId(@Param("projectId") Long projectId, @Param("exactCode") String exactCode, @Param("prefixCode") String prefixCode);
 
         // Trae todos los reportes de progreso de un proyecto ordenados por fecha (Para
         // la Curva S)
@@ -47,15 +47,15 @@ public interface ProgressReportRepository extends JpaRepository<ProgressReport, 
         @Query("SELECT COALESCE(SUM(pr.executedQuantity * pi.unitPrice), 0.0) " +
                         "FROM ProgressReport pr " +
                         "JOIN pr.projectItem pi " +
-                        "WHERE pi.id = :projectItemId")
-        Double calculateEarnedValueByProjectItemId(@Param("projectItemId") Long projectItemId);
+                        "WHERE pi.project.id = :projectId AND (pi.code = :exactCode OR pi.code LIKE :prefixCode)")
+        Double calculateEarnedValueByProjectItemCode(@Param("projectId") Long projectId, @Param("exactCode") String exactCode, @Param("prefixCode") String prefixCode);
 
         // Calcula el Valor Ganado por fecha (Para la Curva S)
         @Query("SELECT pr.reportDate, COALESCE(SUM(pr.executedQuantity * pi.unitPrice), 0.0) " +
                         "FROM ProgressReport pr " +
                         "JOIN pr.projectItem pi " +
-                        "WHERE pi.project.id = :projectId " +
+                        "WHERE pi.project.id = :projectId AND (:exactCode IS NULL OR pi.code = :exactCode OR pi.code LIKE :prefixCode) " +
                         "GROUP BY pr.reportDate " +
                         "ORDER BY pr.reportDate ASC")
-        List<Object[]> getEarnedValueByDate(@Param("projectId") Long projectId);
+        List<Object[]> getEarnedValueByDate(@Param("projectId") Long projectId, @Param("exactCode") String exactCode, @Param("prefixCode") String prefixCode);
 }

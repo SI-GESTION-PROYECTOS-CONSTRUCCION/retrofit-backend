@@ -30,25 +30,53 @@ public class DashboardServiceImpl implements DashboardService {
 
 
     @Override
-    public ProjectDashboardResponseDto getProjectDashboard(Long projectId) {
+    public ProjectDashboardResponseDto getProjectDashboard(Long projectId, Long itemId) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new EntityNotFoundException("Proyecto no encontrado"));
 
+        String exactCode = null;
+        String prefixCode = null;
+        if (itemId != null) {
+            ProjectItem specificItem = projectItemRepository.findById(itemId).orElse(null);
+            if (specificItem != null && specificItem.getCode() != null) {
+                exactCode = specificItem.getCode().trim();
+                if (exactCode.endsWith(".")) {
+                    exactCode = exactCode.substring(0, exactCode.length() - 1);
+                }
+                prefixCode = exactCode + ".%";
+            }
+        }
+
         // KPIs PRINCIPALES
-        Double pv = projectItemRepository.calculatePlannedValueByProjectId(projectId);
-        Double ev = progressReportRepository.calculateEarnedValueByProjectId(projectId);
-        Double ac = progressReportResourceRepository.calculateActualCostByProjectId(projectId);
+        Double pv = projectItemRepository.calculatePlannedValueByProjectId(projectId, exactCode, prefixCode);
+        Double ev = progressReportRepository.calculateEarnedValueByProjectId(projectId, exactCode, prefixCode);
+        Double ac = progressReportResourceRepository.calculateActualCostByProjectId(projectId, exactCode, prefixCode);
 
         Double cv = ev - ac;
         Double cpi = (ac == 0.0) ? 0.0 : (ev / ac);
 
         // TABLA DE ALERTAS
         List<CriticalItemDto> criticalItems = new ArrayList<>();
-        List<ProjectItem> items = projectItemRepository.findByProjectId(projectId);
+        List<ProjectItem> items;
+        if (itemId != null) {
+            ProjectItem specificItem = projectItemRepository.findById(itemId).orElse(null);
+            items = specificItem != null ? List.of(specificItem) : new ArrayList<>();
+        } else {
+            items = projectItemRepository.findByProjectId(projectId);
+        }
 
         for (ProjectItem item : items) {
-            Double itemEv = progressReportRepository.calculateEarnedValueByProjectItemId(item.getId());
-            Double itemAc = progressReportResourceRepository.calculateActualCostByProjectItemId(item.getId());
+            String itemExactCode = null;
+            String itemPrefixCode = null;
+            if (item.getCode() != null) {
+                itemExactCode = item.getCode().trim();
+                if (itemExactCode.endsWith(".")) {
+                    itemExactCode = itemExactCode.substring(0, itemExactCode.length() - 1);
+                }
+                itemPrefixCode = itemExactCode + ".%";
+            }
+            Double itemEv = progressReportRepository.calculateEarnedValueByProjectItemCode(projectId, itemExactCode, itemPrefixCode);
+            Double itemAc = progressReportResourceRepository.calculateActualCostByProjectItemCode(projectId, itemExactCode, itemPrefixCode);
 
             if (itemAc > itemEv) {
                 criticalItems.add(CriticalItemDto.builder()
@@ -67,7 +95,7 @@ public class DashboardServiceImpl implements DashboardService {
         Double totalMaterialCost = 0.0;
         Double totalEquipmentCost = 0.0;
 
-        List<Object[]> costsByType = progressReportResourceRepository.calculateActualCostByResourceType(projectId);
+        List<Object[]> costsByType = progressReportResourceRepository.calculateActualCostByResourceType(projectId, exactCode, prefixCode);
         for (Object[] row : costsByType) {
             Class<?> resourceClass = (Class<?>) row[0]; // Retorna ej: LaborCategory.class
             Double cost = (Double) row[1];
@@ -83,14 +111,14 @@ public class DashboardServiceImpl implements DashboardService {
         }
 
         // CURVA S (Evolución acumulada en el tiempo)
-        List<Object[]> evByDate = progressReportRepository.getEarnedValueByDate(projectId);
-        List<Object[]> acByDate = progressReportResourceRepository.getActualCostByDate(projectId);
+        List<Object[]> evData = progressReportRepository.getEarnedValueByDate(projectId, exactCode, prefixCode);
+        List<Object[]> acData = progressReportResourceRepository.getActualCostByDate(projectId, exactCode, prefixCode);
 
         // Usamos TreeMap para que las fechas se ordenen automáticamente
         Map<LocalDate, double[]> timelineData = new TreeMap<>();
 
         // Rellenar EV
-        for (Object[] row : evByDate) {
+        for (Object[] row : evData) {
             LocalDate date = (LocalDate) row[0];
             Double value = (Double) row[1];
             timelineData.putIfAbsent(date, new double[]{0.0, 0.0});
@@ -98,7 +126,7 @@ public class DashboardServiceImpl implements DashboardService {
         }
 
         // Rellenar AC
-        for (Object[] row : acByDate) {
+        for (Object[] row : acData) {
             LocalDate date = (LocalDate) row[0];
             Double value = (Double) row[1];
             timelineData.putIfAbsent(date, new double[]{0.0, 0.0});

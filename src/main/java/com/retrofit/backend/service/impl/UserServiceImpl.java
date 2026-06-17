@@ -156,10 +156,11 @@ public class UserServiceImpl implements UserService {
 
             if (newRole.getName().equals("ADMIN")) {
                 Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-                boolean isAdmin = auth.getAuthorities().stream()
-                        .anyMatch(a -> a.getAuthority().equals("ADMIN"));
-
-                if (!isAdmin) {
+                String currentUsername = auth.getName();
+                User currentUser = userRepository.findByUsername(currentUsername)
+                        .orElseThrow(() -> new AccessDeniedException("Usuario actual no encontrado"));
+                        
+                if (!currentUser.getRole().getName().equals("ADMIN")) {
                     throw new AccessDeniedException("No tienes permisos para asignar el rol de ADMINISTRADOR.");
                 }
             }
