@@ -73,7 +73,7 @@ public class AuditServiceImpl implements AuditService {
         LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
 
         // Definimos las acciones críticas generales (En cualquier módulo)
-        List<String> accionesCriticas = Arrays.asList("DELETE", "EXPORT", "LOGIN_FAILED");
+        List<String> accionesCriticas = Arrays.asList("DELETE", "LOGIN_FAILED");
 
         // Definimos el módulo ultra-sensible (Cualquier acción aquí será alerta)
         String moduloCritico = "Roles";

@@ -14,10 +14,11 @@ public interface ProjectItemRepository extends JpaRepository<ProjectItem, Long> 
     List<ProjectItem> findByProjectIdOrderByItemOrderAsc(Long projectId);
     List<ProjectItem> findByPredecessorId(Long predecessorId);
 
-    // Calcular el Presupuesto Total Planeado de un Proyecto
+    // Calcular el Presupuesto Total Planeado de un Proyecto (o partida específica si itemId no es nulo)
     @Query("SELECT COALESCE(SUM(pi.totalQuantity * pi.unitPrice), 0.0) " +
             "FROM ProjectItem pi " +
-            "WHERE pi.project.id = :projectId")
-    Double calculatePlannedValueByProjectId(@Param("projectId") Long projectId);
+            "WHERE pi.project.id = :projectId " +
+            "AND (:exactCode IS NULL OR pi.code = :exactCode OR pi.code LIKE :prefixCode)")
+    Double calculatePlannedValueByProjectId(@Param("projectId") Long projectId, @Param("exactCode") String exactCode, @Param("prefixCode") String prefixCode);
     List<ProjectItem> findByProjectId(Long projectId);
 }
