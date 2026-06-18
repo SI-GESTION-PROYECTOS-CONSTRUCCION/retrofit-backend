@@ -1,6 +1,5 @@
 package com.retrofit.backend.dto;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,5 +15,5 @@ public class AdminDTO {
     private String password;
     private String role;
     private String name;
+    private String lastName;
 }
-

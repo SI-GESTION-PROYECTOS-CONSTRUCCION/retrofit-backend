@@ -41,13 +41,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDTO registerAdmin(AdminDTO admin) {
-        if(adminRepository.findByEmail(admin.getEmail()).isPresent()){
+        if (adminRepository.findByEmail(admin.getEmail()).isPresent()) {
             throw new IllegalArgumentException("User email already exists");
         }
 
         RoleE adminRole = roleRepository.findByName("ADMIN")
                 .orElseThrow(() -> new RuntimeException("Rol ADMIN no existe en la base de datos"));
-
 
         Admin user = Admin.builder()
                 .email(admin.getEmail())
@@ -55,14 +54,12 @@ public class UserServiceImpl implements UserService {
                 .role(adminRole)
                 .username(admin.getUsername())
                 .name(admin.getName())
+                .lastName(admin.getLastName())
                 .active(true)
                 .createdAt(Timestamp.valueOf(LocalDateTime.now()))
                 .build();
-
-        System.out.println(user.getRole());
         return mapToDTO(adminRepository.save(user));
     }
-
 
     @Override
     @AuditChange(action = "CREATE", module = "Usuarios")
@@ -71,11 +68,11 @@ public class UserServiceImpl implements UserService {
         RoleE roleEntity = roleRepository.findByName(dto.getRole())
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado: " + dto.getRole()));
 
-        if(userRepository.findByUsername(dto.getUsername()).isPresent()){
+        if (userRepository.findByUsername(dto.getUsername()).isPresent()) {
             throw new IllegalArgumentException("User username already exists");
         }
 
-        if(userRepository.findByEmail(dto.getEmail()).isPresent()){
+        if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
             throw new IllegalArgumentException("User email already exists");
         }
 
@@ -145,10 +142,14 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-        if (dto.getEmail() != null && !dto.getEmail().isBlank()) userFound.setEmail(dto.getEmail());
-        if (dto.getName() != null && !dto.getName().isBlank()) userFound.setName(dto.getName());
-        if (dto.getLastName() != null && !dto.getLastName().isBlank()) userFound.setLastName(dto.getLastName());
-        if (dto.getPassword() != null && !dto.getPassword().isBlank()) userFound.setPassword(passwordEncoder.encode(dto.getPassword()));
+        if (dto.getEmail() != null && !dto.getEmail().isBlank())
+            userFound.setEmail(dto.getEmail());
+        if (dto.getName() != null && !dto.getName().isBlank())
+            userFound.setName(dto.getName());
+        if (dto.getLastName() != null && !dto.getLastName().isBlank())
+            userFound.setLastName(dto.getLastName());
+        if (dto.getPassword() != null && !dto.getPassword().isBlank())
+            userFound.setPassword(passwordEncoder.encode(dto.getPassword()));
         // Solo los usuarios ADMIN pueden cambiar a otro usuario a ADMIN
         if (dto.getRole() != null && !dto.getRole().isBlank()) {
             RoleE newRole = roleRepository.findByName(dto.getRole())
@@ -159,7 +160,7 @@ public class UserServiceImpl implements UserService {
                 String currentUsername = auth.getName();
                 User currentUser = userRepository.findByUsername(currentUsername)
                         .orElseThrow(() -> new AccessDeniedException("Usuario actual no encontrado"));
-                        
+
                 if (!currentUser.getRole().getName().equals("ADMIN")) {
                     throw new AccessDeniedException("No tienes permisos para asignar el rol de ADMINISTRADOR.");
                 }
@@ -170,14 +171,16 @@ public class UserServiceImpl implements UserService {
 
         workerRepository.findByUser(userFound).ifPresent(worker -> {
             // Si el nombre o apellido cambiaron en el User, se los pasamos al Worker
-            if (dto.getName() != null && !dto.getName().isBlank()) worker.setName(dto.getName());
-            if (dto.getLastName() != null && !dto.getLastName().isBlank()) worker.setLastName(dto.getLastName());
+            if (dto.getName() != null && !dto.getName().isBlank())
+                worker.setName(dto.getName());
+            if (dto.getLastName() != null && !dto.getLastName().isBlank())
+                worker.setLastName(dto.getLastName());
             workerRepository.save(worker);
         });
 
         userFound.setUpdatedAt(Timestamp.valueOf(LocalDateTime.now()));
 
-        UserDTO estadoNuevo =  mapToDTO(userFound);
+        UserDTO estadoNuevo = mapToDTO(userFound);
         auditService.logAction("UPDATE", "Usuarios", userFound.getId(), estadoAnterior, estadoNuevo);
         return mapToDTO(userRepository.save(userFound));
     }
@@ -200,7 +203,7 @@ public class UserServiceImpl implements UserService {
         return mapToDTO(user);
     }
 
-    private UserDTO mapToDTO(User user){
+    private UserDTO mapToDTO(User user) {
         return UserDTO.builder()
                 .id(user.getId())
                 .email(user.getEmail())
@@ -214,4 +217,3 @@ public class UserServiceImpl implements UserService {
                 .build();
     }
 }
-
