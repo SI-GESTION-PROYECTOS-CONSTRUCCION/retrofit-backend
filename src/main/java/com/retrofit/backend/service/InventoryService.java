@@ -19,6 +19,6 @@ public interface InventoryService {
     Page<StockSummaryDTO> getProjectStockSummary(Long projectId, Pageable pageable);
     List<InventoryTransactionResponseDTO> getKardex(Long projectId, Long resourceId);
     List<PlannedResourceDTO> getPlannedMaterialsForProject(Long projectId);
-    List<SupplyControlDTO> getSupplyControl(Long projectId);
+    List<SupplyControlDTO> getSupplyControl(Long projectId, String status, String resourceName);
     BigDecimal getConsumedQuantity(Long projectItemId, Long resourceId, LocalDate date);
 }

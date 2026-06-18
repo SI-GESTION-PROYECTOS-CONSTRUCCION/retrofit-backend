@@ -79,8 +79,10 @@ public class InventoryController {
     @GetMapping("/supply-control")
     @PreAuthorize("hasAuthority('INVENTORY_READ')")
     public ResponseEntity<List<SupplyControlDTO>> getSupplyControl(
-            @RequestParam Long projectId) {
-        return ResponseEntity.ok(inventoryService.getSupplyControl(projectId));
+            @RequestParam Long projectId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String resourceName) {
+        return ResponseEntity.ok(inventoryService.getSupplyControl(projectId, status, resourceName));
     }
 
     // 8. Obtener cantidad consumida por partida (Para automatizacion de avance diario)

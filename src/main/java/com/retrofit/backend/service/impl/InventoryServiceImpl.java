@@ -126,7 +126,7 @@ import org.springframework.transaction.annotation.Transactional;
 
         @Override
         @Transactional(readOnly = true)
-        public List<SupplyControlDTO> getSupplyControl(Long projectId) {
+        public List<SupplyControlDTO> getSupplyControl(Long projectId, String statusFilter, String resourceNameFilter) {
             // 1. Obtener Explosión de Insumos (Budgeted Quantity)
             List<Object[]> budgetedList = projectItemResourceRepository.getBudgetedQuantitiesByProject(projectId);
             
@@ -160,7 +160,13 @@ import org.springframework.transaction.annotation.Transactional;
                     status = "EXCESS";
                 }
                 
-                result.add(new SupplyControlDTO(resId, resName, resUnit, budgQty, recQty, missingQty, status));
+                boolean matchName = resourceNameFilter == null || resourceNameFilter.trim().isEmpty() || 
+                                    (resName != null && resName.toLowerCase().contains(resourceNameFilter.toLowerCase().trim()));
+                boolean matchStatus = statusFilter == null || statusFilter.trim().isEmpty() || statusFilter.equalsIgnoreCase(status);
+
+                if (matchName && matchStatus) {
+                    result.add(new SupplyControlDTO(resId, resName, resUnit, budgQty, recQty, missingQty, status));
+                }
             }
             
             return result;

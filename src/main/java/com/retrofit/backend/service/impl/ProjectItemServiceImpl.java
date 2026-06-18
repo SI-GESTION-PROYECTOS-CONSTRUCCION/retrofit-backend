@@ -107,6 +107,16 @@ public class ProjectItemServiceImpl implements ProjectItemService {
             itemRepository.findAllById(itemIds).forEach(item -> existingItemsMap.put(item.getId(), item));
         }
 
+        // Eliminar items que ya no están en la lista (fueron borrados en el frontend)
+        List<ProjectItem> currentItemsInDb = itemRepository.findByProjectId(projectId);
+        List<ProjectItem> itemsToDelete = currentItemsInDb.stream()
+                .filter(item -> !itemIds.contains(item.getId()))
+                .collect(Collectors.toList());
+
+        if (!itemsToDelete.isEmpty()) {
+            itemRepository.deleteAll(itemsToDelete);
+        }
+
         for (ProjectItemRequestDto dto : request.getItems()) {
             ProjectItem item;
             if (dto.getId() != null) {
@@ -153,14 +163,16 @@ public class ProjectItemServiceImpl implements ProjectItemService {
 
         itemRepository.saveAll(itemsToSave);
 
-        double generalExpensesPercentage = project.getGeneralExpensesPercentage() != null ? project.getGeneralExpensesPercentage() : 5.0;
+        double generalExpensesPercentage = project.getGeneralExpensesPercentage() != null
+                ? project.getGeneralExpensesPercentage()
+                : 5.0;
         double utilityPercentage = project.getUtilityPercentage() != null ? project.getUtilityPercentage() : 4.0;
-        
+
         double generalExpenses = calculatedDirectCost * (generalExpensesPercentage / 100);
         double utility = calculatedDirectCost * (utilityPercentage / 100);
         double subtotal = calculatedDirectCost + generalExpenses + utility;
         double igv = subtotal * 0.18;
-        
+
         project.setTotalBudget(subtotal + igv);
         projectRepository.save(project);
 
@@ -170,12 +182,12 @@ public class ProjectItemServiceImpl implements ProjectItemService {
     @Override
     @Transactional
     @AuditChange(action = "UPDATE", module = "Presupuestos")
-    public ProjectItemResponseDto saveApuDetails(Long itemId, Double laborYield, Double equipmentYield, List<ProjectItemResourceRequestDto> dtos) {
+    public ProjectItemResponseDto saveApuDetails(Long itemId, Double laborYield, Double equipmentYield,
+            List<ProjectItemResourceRequestDto> dtos) {
 
         // 1. Buscamos la Partida
         ProjectItem item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Partida no encontrada"));
-
 
         item.setLaborYield(laborYield != null ? laborYield : 0.0);
         item.setEquipmentYield(equipmentYield != null ? equipmentYield : 0.0);
@@ -269,15 +281,17 @@ public class ProjectItemServiceImpl implements ProjectItemService {
                 directCost += (pi.getTotalQuantity() * pi.getUnitPrice());
             }
         }
-        
-        double generalExpensesPercentage = project.getGeneralExpensesPercentage() != null ? project.getGeneralExpensesPercentage() : 5.0;
+
+        double generalExpensesPercentage = project.getGeneralExpensesPercentage() != null
+                ? project.getGeneralExpensesPercentage()
+                : 5.0;
         double utilityPercentage = project.getUtilityPercentage() != null ? project.getUtilityPercentage() : 4.0;
-        
+
         double generalExpenses = directCost * (generalExpensesPercentage / 100);
         double utility = directCost * (utilityPercentage / 100);
         double subtotal = directCost + generalExpenses + utility;
         double igv = subtotal * 0.18;
-        
+
         project.setTotalBudget(subtotal + igv);
         projectRepository.save(project);
     }
@@ -324,7 +338,6 @@ public class ProjectItemServiceImpl implements ProjectItemService {
         return dto;
     }
 
-
     @Transactional
     public void updateGanttDates(Long itemId, GanttUpdateDto dto) {
         ProjectItem item = itemRepository.findById(itemId)
@@ -340,14 +353,15 @@ public class ProjectItemServiceImpl implements ProjectItemService {
         item.setStartDate(dto.getStartDate());
         item.setEndDate(dto.getEndDate());
         item.setPredecessorId(dto.getPredecessorId());
-        
+
         List<ProjectItem> modifiedItems = new ArrayList<>();
         modifiedItems.add(item);
 
-        // 3. EFECTO DOMINÓ: Si la barra se movió (daysShifted != 0), empujamos a sus hijas en memoria
+        // 3. EFECTO DOMINÓ: Si la barra se movió (daysShifted != 0), empujamos a sus
+        // hijas en memoria
         if (daysShifted != 0) {
             List<ProjectItem> allProjectItems = itemRepository.findByProjectId(item.getProject().getId());
-            
+
             Map<Long, List<ProjectItem>> childrenGraph = new HashMap<>();
             for (ProjectItem pi : allProjectItems) {
                 if (pi.getPredecessorId() != null) {
@@ -357,14 +371,15 @@ public class ProjectItemServiceImpl implements ProjectItemService {
 
             cascadeDateShiftInMemory(item.getId(), daysShifted, childrenGraph, modifiedItems);
         }
-        
+
         itemRepository.saveAll(modifiedItems);
-        
+
         // Registrar en el log de auditoría los cambios en el cronograma
         auditService.logAction("UPDATE", "Gantt", itemId, null, dto);
     }
 
-    private void cascadeDateShiftInMemory(Long parentId, long daysShifted, Map<Long, List<ProjectItem>> childrenGraph, List<ProjectItem> modifiedItems) {
+    private void cascadeDateShiftInMemory(Long parentId, long daysShifted, Map<Long, List<ProjectItem>> childrenGraph,
+            List<ProjectItem> modifiedItems) {
         List<ProjectItem> children = childrenGraph.getOrDefault(parentId, Collections.emptyList());
 
         for (ProjectItem child : children) {
@@ -383,23 +398,23 @@ public class ProjectItemServiceImpl implements ProjectItemService {
 
     private void cascadeDateShift(Long parentId, long daysShifted) {
         ProjectItem item = itemRepository.findById(parentId).orElse(null);
-        if (item == null) return;
+        if (item == null)
+            return;
         List<ProjectItem> allProjectItems = itemRepository.findByProjectId(item.getProject().getId());
-        
+
         Map<Long, List<ProjectItem>> childrenGraph = new HashMap<>();
         for (ProjectItem pi : allProjectItems) {
             if (pi.getPredecessorId() != null) {
                 childrenGraph.computeIfAbsent(pi.getPredecessorId(), k -> new ArrayList<>()).add(pi);
             }
         }
-        
+
         List<ProjectItem> modifiedItems = new ArrayList<>();
         cascadeDateShiftInMemory(parentId, daysShifted, childrenGraph, modifiedItems);
         if (!modifiedItems.isEmpty()) {
             itemRepository.saveAll(modifiedItems);
         }
     }
-
 
     public List<GanttItemResponseDto> getGanttItems(Long projectId) {
         Project project = projectRepository.findById(projectId)
@@ -413,28 +428,92 @@ public class ProjectItemServiceImpl implements ProjectItemService {
         LocalDate currentDate = project.getStartDate();
         Long prevLeafItemId = null; // Guardará solo IDs de tareas "hijas"
 
+        Set<Long> validIds = items.stream().map(ProjectItem::getId).collect(java.util.stream.Collectors.toSet());
+
         // 1. AUTO-LINKER: Solo para tareas reales (que tienen metrado)
+        Map<Long, Long> predecessorRemap = new HashMap<>(); // Para reconectar dependencias "rotas" por inserciones
         List<ProjectItem> itemsToUpdate = new ArrayList<>();
-        
+
         for (ProjectItem item : items) {
             boolean isParent = (item.getTotalQuantity() == null || item.getTotalQuantity() == 0);
 
-            if (!isParent && item.getStartDate() == null) {
-                int baseDays = 1;
-                if (item.getLaborYield() != null && item.getLaborYield() > 0) {
-                    baseDays = (int) Math.ceil(item.getTotalQuantity() / item.getLaborYield());
+            if (!isParent) {
+                // 1. Si la partida ya tenía fechas, validamos si debemos "empujarla" (splice o heal)
+                if (item.getStartDate() != null) {
+                    Long currentPredId = item.getPredecessorId();
+                    boolean modified = false;
+
+                    // A) HEALING DE BORRADO: Si su predecesor fue borrado, lo amarramos a la última hoja válida
+                    if (currentPredId != null && !validIds.contains(currentPredId)) {
+                        item.setPredecessorId(prevLeafItemId);
+                        currentPredId = prevLeafItemId;
+                        modified = true;
+                    }
+
+                    // B) HEALING DE INSERCIÓN: Si su predecesor fue reemplazado, actualizamos su flecha
+                    if (currentPredId != null && predecessorRemap.containsKey(currentPredId)) {
+                        Long newPredId = predecessorRemap.get(currentPredId);
+                        if (!currentPredId.equals(newPredId)) {
+                            item.setPredecessorId(newPredId);
+                            modified = true;
+                        }
+                    }
+
+                    // C) DATE SNAP: Si está encadenado a la hoja anterior, o es el primer nodo absoluto, debe pegar en currentDate
+                    boolean shouldSnap = false;
+                    if (item.getPredecessorId() == null && prevLeafItemId == null) {
+                        shouldSnap = true; // El primer ítem del proyecto
+                    } else if (item.getPredecessorId() != null && item.getPredecessorId().equals(prevLeafItemId)) {
+                        shouldSnap = true; // Secuencia ininterrumpida
+                    }
+
+                    if (shouldSnap) {
+                        if (!item.getStartDate().equals(currentDate)) {
+                            long daysShifted = java.time.temporal.ChronoUnit.DAYS.between(item.getStartDate(), currentDate);
+                            item.setStartDate(item.getStartDate().plusDays(daysShifted));
+                            if (item.getEndDate() != null) {
+                                item.setEndDate(item.getEndDate().plusDays(daysShifted));
+                            }
+                            modified = true;
+                        }
+                    }
+
+                    if (modified) {
+                        itemsToUpdate.add(item);
+                    }
                 }
 
-                item.setStartDate(currentDate);
-                item.setEndDate(currentDate.plusDays(baseDays));
-                item.setPredecessorId(prevLeafItemId); // Solo se amarra a la hija anterior
-                itemsToUpdate.add(item);
+                // 2. Si la partida es NUEVA (sin fechas)
+                if (item.getStartDate() == null) {
+                    int baseDays = 1;
+                    if (item.getLaborYield() != null && item.getLaborYield() > 0) {
+                        baseDays = (int) Math.ceil(item.getTotalQuantity() / item.getLaborYield());
+                    }
 
-                currentDate = item.getEndDate();
+                    item.setStartDate(currentDate);
+                    item.setEndDate(currentDate.plusDays(baseDays));
+                    item.setPredecessorId(prevLeafItemId); // Se amarra a la hija anterior
+                    itemsToUpdate.add(item);
+
+                    // Reemplazamos al antiguo líder (prevLeafItemId) con este nuevo ítem
+                    if (prevLeafItemId != null) {
+                        predecessorRemap.put(prevLeafItemId, item.getId());
+                    }
+                    // Si algo ya había sido redirigido a prevLeafItemId, lo redirigimos a este nuevo también
+                    for (Map.Entry<Long, Long> entry : predecessorRemap.entrySet()) {
+                        if (entry.getValue().equals(prevLeafItemId)) {
+                            entry.setValue(item.getId());
+                        }
+                    }
+                }
+
+                if (item.getEndDate() != null) {
+                    currentDate = item.getEndDate();
+                }
                 prevLeafItemId = item.getId();
             }
         }
-        
+
         if (!itemsToUpdate.isEmpty()) {
             itemRepository.saveAll(itemsToUpdate);
         }
@@ -446,7 +525,8 @@ public class ProjectItemServiceImpl implements ProjectItemService {
             int currentLevel = item.getLevel() != null ? item.getLevel() : 0;
             levelTracker.put(currentLevel, item.getId()); // Actualizamos el ID de este nivel
 
-            // El padre siempre es el último elemento registrado en el nivel superior (currentLevel - 1)
+            // El padre siempre es el último elemento registrado en el nivel superior
+            // (currentLevel - 1)
             Long myParentId = currentLevel > 0 ? levelTracker.get(currentLevel - 1) : null;
             boolean isParent = (item.getTotalQuantity() == null || item.getTotalQuantity() == 0);
 
@@ -465,7 +545,8 @@ public class ProjectItemServiceImpl implements ProjectItemService {
             // ------------------------------
 
             int baseDays = 1;
-            if (!isParent && item.getTotalQuantity() != null && item.getLaborYield() != null && item.getLaborYield() > 0) {
+            if (!isParent && item.getTotalQuantity() != null && item.getLaborYield() != null
+                    && item.getLaborYield() > 0) {
                 baseDays = (int) Math.ceil(item.getTotalQuantity() / item.getLaborYield());
             }
             dto.setBaseDurationDays(isParent ? 0 : baseDays);
