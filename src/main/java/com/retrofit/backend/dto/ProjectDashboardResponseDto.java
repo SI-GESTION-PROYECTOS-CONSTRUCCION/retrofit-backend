@@ -9,6 +9,7 @@ import java.util.List;
 @Builder
 public class ProjectDashboardResponseDto {
     private Long projectId;
+    private String projectCode;
     private String projectName;
 
     // Kpis principales
@@ -17,6 +18,12 @@ public class ProjectDashboardResponseDto {
     private Double actualCost; // AC
     private Double costVariance; // CV (EV - AC)
     private Double cpi; // Indice de desempeno (EV / AC)
+
+    // Avances
+    private Double avanceTotalEjecutado;
+    private Double avanceTotalPlanificado;
+    private Double porcentajeAvance;
+    private String itemUnit; // Unidad de la partida o "" si es global
 
     // Para el grafico de donas
     private Double totalLaborCost; // Mano de obra
@@ -28,4 +35,7 @@ public class ProjectDashboardResponseDto {
 
     // Para la tabla de alertias Partidas Criticas
     private List<CriticalItemDto> criticalItems;
+
+    // Para la lista de ultimos avances
+    private List<LatestProgressDto> recentProgresses;
 }

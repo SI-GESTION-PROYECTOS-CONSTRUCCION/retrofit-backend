@@ -55,6 +55,19 @@ public class DashboardServiceImpl implements DashboardService {
         Double cv = ev - ac;
         Double cpi = (ac == 0.0) ? 0.0 : (ev / ac);
 
+        // AVANCES (Ejecutado vs Planificado)
+        Double avanceTotalPlanificado = projectItemRepository.calculateTotalPlannedQuantityByProjectId(projectId, exactCode, prefixCode);
+        Double avanceTotalEjecutado = progressReportRepository.calculateTotalExecutedQuantityByProjectId(projectId, exactCode, prefixCode);
+        Double porcentajeAvance = (avanceTotalPlanificado == 0.0) ? 0.0 : ((avanceTotalEjecutado / avanceTotalPlanificado) * 100.0);
+        
+        String itemUnit = "";
+        if (itemId != null) {
+            ProjectItem specificItem = projectItemRepository.findById(itemId).orElse(null);
+            if (specificItem != null && specificItem.getUnit() != null) {
+                itemUnit = specificItem.getUnit();
+            }
+        }
+
         // TABLA DE ALERTAS
         List<CriticalItemDto> criticalItems = new ArrayList<>();
         List<ProjectItem> items;
@@ -150,19 +163,38 @@ public class DashboardServiceImpl implements DashboardService {
                     .build());
         }
 
+        // ULTIMOS AVANCES (Para la vista de "Avances del Ultimo Dia")
+        org.springframework.data.domain.Pageable topFive = org.springframework.data.domain.PageRequest.of(0, 5);
+        List<com.retrofit.backend.model.ProgressReport> recentReports = progressReportRepository.findRecentReports(projectId, exactCode, prefixCode, topFive);
+        List<com.retrofit.backend.dto.LatestProgressDto> recentProgresses = recentReports.stream().map(pr -> com.retrofit.backend.dto.LatestProgressDto.builder()
+                .reportId(pr.getId())
+                .date(pr.getReportDate().toString())
+                .itemCode(pr.getProjectItem().getCode())
+                .itemDescription(pr.getProjectItem().getDescription())
+                .executedQuantity(pr.getExecutedQuantity())
+                .unit(pr.getProjectItem().getUnit())
+                .build()
+        ).toList();
+
         return ProjectDashboardResponseDto.builder()
                 .projectId(project.getId())
+                .projectCode(project.getCode())
                 .projectName(project.getName())
                 .plannedValue(pv)
                 .earnedValue(ev)
                 .actualCost(ac)
                 .costVariance(cv)
                 .cpi(cpi)
+                .avanceTotalEjecutado(avanceTotalEjecutado)
+                .avanceTotalPlanificado(avanceTotalPlanificado)
+                .porcentajeAvance(porcentajeAvance)
+                .itemUnit(itemUnit)
                 .totalLaborCost(totalLaborCost)
                 .totalMaterialCost(totalMaterialCost)
                 .totalEquipmentCost(totalEquipmentCost)
                 .criticalItems(criticalItems)
                 .timeEvolution(timeEvolution)
+                .recentProgresses(recentProgresses)
                 .build();
     }
 

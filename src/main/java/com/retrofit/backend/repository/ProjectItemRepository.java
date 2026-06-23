@@ -20,5 +20,13 @@ public interface ProjectItemRepository extends JpaRepository<ProjectItem, Long> 
             "WHERE pi.project.id = :projectId " +
             "AND (:exactCode IS NULL OR pi.code = :exactCode OR pi.code LIKE :prefixCode)")
     Double calculatePlannedValueByProjectId(@Param("projectId") Long projectId, @Param("exactCode") String exactCode, @Param("prefixCode") String prefixCode);
+
+    // Calcular el Total de Metrado Planificado (Suma de totalQuantity)
+    @Query("SELECT COALESCE(SUM(pi.totalQuantity), 0.0) " +
+            "FROM ProjectItem pi " +
+            "WHERE pi.project.id = :projectId " +
+            "AND (:exactCode IS NULL OR pi.code = :exactCode OR pi.code LIKE :prefixCode)")
+    Double calculateTotalPlannedQuantityByProjectId(@Param("projectId") Long projectId, @Param("exactCode") String exactCode, @Param("prefixCode") String prefixCode);
+    
     List<ProjectItem> findByProjectId(Long projectId);
 }

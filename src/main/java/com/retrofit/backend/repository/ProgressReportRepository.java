@@ -27,12 +27,24 @@ public interface ProgressReportRepository extends JpaRepository<ProgressReport, 
                         @Param("endDate") LocalDate endDate,
                         @Param("itemCode") String itemCode);
 
+        // Trae los ultimos reportes de avance de un proyecto o partida
+        @Query("SELECT pr FROM ProgressReport pr JOIN pr.projectItem pi WHERE pi.project.id = :projectId AND (:exactCode IS NULL OR pi.code = :exactCode OR pi.code LIKE :prefixCode) ORDER BY pr.reportDate DESC, pr.createdAt DESC")
+        List<ProgressReport> findRecentReports(@Param("projectId") Long projectId, @Param("exactCode") String exactCode, @Param("prefixCode") String prefixCode, org.springframework.data.domain.Pageable pageable);
+
+
         // Calcula el Valor Ganado (EV) Total de un proyecto
         @Query("SELECT COALESCE(SUM(pr.executedQuantity * pi.unitPrice), 0.0) " +
                         "FROM ProgressReport pr " +
                         "JOIN pr.projectItem pi " +
                         "WHERE pi.project.id = :projectId AND (:exactCode IS NULL OR pi.code = :exactCode OR pi.code LIKE :prefixCode)")
         Double calculateEarnedValueByProjectId(@Param("projectId") Long projectId, @Param("exactCode") String exactCode, @Param("prefixCode") String prefixCode);
+
+        // Calcula el Total de Metrado Ejecutado (Suma de executedQuantity)
+        @Query("SELECT COALESCE(SUM(pr.executedQuantity), 0.0) " +
+                        "FROM ProgressReport pr " +
+                        "JOIN pr.projectItem pi " +
+                        "WHERE pi.project.id = :projectId AND (:exactCode IS NULL OR pi.code = :exactCode OR pi.code LIKE :prefixCode)")
+        Double calculateTotalExecutedQuantityByProjectId(@Param("projectId") Long projectId, @Param("exactCode") String exactCode, @Param("prefixCode") String prefixCode);
 
         // Trae todos los reportes de progreso de un proyecto ordenados por fecha (Para
         // la Curva S)
