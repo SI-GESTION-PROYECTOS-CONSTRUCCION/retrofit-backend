@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -23,7 +24,7 @@ public class WorkerController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('WORKER_CREATE')")
-    public ResponseEntity<WorkerDTO> create(@RequestBody WorkerCreateDTO dto) {
+    public ResponseEntity<WorkerDTO> create(@Valid @RequestBody WorkerCreateDTO dto) {
         return new ResponseEntity<>(workerService.createWorker(dto), HttpStatus.CREATED);
     }
 
@@ -31,10 +32,11 @@ public class WorkerController {
     @PreAuthorize("hasAuthority('WORKER_READ')")
     public ResponseEntity<Page<WorkerDTO>> getAll(
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) Boolean active,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
-        return ResponseEntity.ok(workerService.getAllWorkers(search, pageable));
+        return ResponseEntity.ok(workerService.getAllWorkers(search, active, pageable));
     }
 
     @GetMapping("/{id}")
@@ -51,7 +53,7 @@ public class WorkerController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('WORKER_UPDATE')")
-    public ResponseEntity<WorkerDTO> update(@PathVariable Long id, @RequestBody WorkerCreateDTO dto) {
+    public ResponseEntity<WorkerDTO> update(@PathVariable Long id, @Valid @RequestBody WorkerCreateDTO dto) {
         return ResponseEntity.ok(workerService.updateWorker(id, dto));
     }
 

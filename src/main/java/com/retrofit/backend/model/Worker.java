@@ -27,8 +27,6 @@ public class Worker {
     private String name;
     private String lastName;
 
-    @Column(unique = true, nullable = true)
-    private String email;
 
     private String position;
 

@@ -21,8 +21,9 @@ public interface WorkerRepository extends JpaRepository<Worker, Long> {
     @Query("SELECT w FROM Worker w WHERE " +
             "(:search = '' OR LOWER(w.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
             "LOWER(w.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-            "LOWER(w.dni) LIKE LOWER(CONCAT('%', :search, '%')))")
-    Page<Worker> findWithFilters(@Param("search") String search, Pageable pageable);
+            "LOWER(w.dni) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
+            "(:active IS NULL OR w.active = :active)")
+    Page<Worker> findWithFilters(@Param("search") String search, @Param("active") Boolean active, Pageable pageable);
     @Query("SELECT w FROM Worker w WHERE w.id NOT IN " +
             "(SELECT pa.worker.id FROM ProjectAssignment pa WHERE pa.active = true) " +
             "AND w.active = true")

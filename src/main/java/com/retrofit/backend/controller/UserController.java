@@ -11,6 +11,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/users")
@@ -21,7 +22,7 @@ public class UserController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('USER_CREATE')")
-    public ResponseEntity<UserDTO> registerUser(@RequestBody UserCreateDTO request){
+    public ResponseEntity<UserDTO> registerUser(@Valid @RequestBody UserCreateDTO request){
         return ResponseEntity.ok(userService.registerUser(request));
     }
 
@@ -33,7 +34,7 @@ public class UserController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('USER_UPDATE')")
-    public ResponseEntity<UserDTO> updateUser(@PathVariable Long id, @RequestBody UserCreateDTO dto){
+    public ResponseEntity<UserDTO> updateUser(@PathVariable Long id, @Valid @RequestBody UserCreateDTO dto){
         return ResponseEntity.ok(userService.updateUser(id, dto));
     }
 
@@ -49,10 +50,11 @@ public class UserController {
     public ResponseEntity<Page<UserDTO>> getAll(
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "ALL") String roleName,
+            @RequestParam(required = false) Boolean active,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
-        return ResponseEntity.ok(userService.getAllUsers(search, roleName, pageable));
+        return ResponseEntity.ok(userService.getAllUsers(search, roleName, active, pageable));
     }
 }

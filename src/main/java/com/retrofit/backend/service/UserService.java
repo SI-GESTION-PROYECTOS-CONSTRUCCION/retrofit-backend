@@ -12,6 +12,6 @@ public interface UserService {
     UserDTO registerUser(UserCreateDTO dto);
     UserDTO updateUser(long id, UserCreateDTO dto);
     void deleteUser(long id);
-    Page<UserDTO> getAllUsers(String search, String roleName, Pageable pageable);
+    Page<UserDTO> getAllUsers(String search, String roleName, Boolean active, Pageable pageable);
     UserDTO getUserById(long id);
 }

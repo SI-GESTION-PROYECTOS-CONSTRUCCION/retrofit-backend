@@ -109,11 +109,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Page<UserDTO> getAllUsers(String search, String roleName, Pageable pageable) {
+    public Page<UserDTO> getAllUsers(String search, String roleName, Boolean active, Pageable pageable) {
         String finalSearch = (search == null) ? "" : search.trim();
-        String finalRole = (roleName == null) ? "ALL" : roleName;
-
-        return userRepository.findWithFilters(finalSearch, finalRole, pageable)
+        return userRepository.findWithFilters(finalSearch, roleName, active, pageable)
                 .map(this::mapToDTO);
     }
 

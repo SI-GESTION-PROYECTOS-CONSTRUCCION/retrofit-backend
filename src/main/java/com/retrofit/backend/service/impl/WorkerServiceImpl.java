@@ -70,15 +70,16 @@ public class WorkerServiceImpl implements WorkerService {
             userAccount = userRepository.findById(savedUser.getId()).orElse(null);
         }
 
-        // El worker se crea con los datos que vengan (el email puede ser null)
+        String phoneToSave = (dto.getPhone() != null && !dto.getPhone().isBlank()) ? dto.getPhone() : null;
+
+        // El worker se crea con los datos que vengan
         Worker worker = Worker.builder()
                 .user(userAccount)
                 .name(dto.getName())
                 .lastName(dto.getLastName())
-                .email(dto.getEmail())
                 .position(dto.getPosition())
                 .dni(dto.getDni())
-                .phone(dto.getPhone())
+                .phone(phoneToSave)
                 .active(true)
                 .createdAt(Timestamp.valueOf(LocalDateTime.now()))
                 .build();
@@ -94,25 +95,30 @@ public class WorkerServiceImpl implements WorkerService {
 
         WorkerDTO estadoAnterior = mapToDTO(worker);
 
-        if (dto.getDni() != null && !dto.getDni().isBlank() && !dto.getDni().equals(worker.getDni())) {
-            if (workerRepository.existsByDni(dto.getDni())) {
-                throw new IllegalArgumentException("Worker DNI already exists");
+        if (dto.getDni() != null) {
+            String dniToUpdate = dto.getDni().isBlank() ? null : dto.getDni();
+            if (dniToUpdate != null && !dniToUpdate.equals(worker.getDni())) {
+                if (workerRepository.existsByDni(dniToUpdate)) {
+                    throw new IllegalArgumentException("Worker DNI already exists");
+                }
             }
-            worker.setDni(dto.getDni());
+            if (dniToUpdate != null) worker.setDni(dniToUpdate);
         }
 
-        if (dto.getPhone() != null && !dto.getPhone().isBlank() && !dto.getPhone().equals(worker.getPhone())) {
-            if (workerRepository.existsByPhone(dto.getPhone())) {
-                throw new IllegalArgumentException("Worker phone already exists");
+        if (dto.getPhone() != null) {
+            String phoneToUpdate = dto.getPhone().isBlank() ? null : dto.getPhone();
+            if (phoneToUpdate != null && !phoneToUpdate.equals(worker.getPhone())) {
+                if (workerRepository.existsByPhone(phoneToUpdate)) {
+                    throw new IllegalArgumentException("Worker phone already exists");
+                }
             }
-            worker.setPhone(dto.getPhone());
+            worker.setPhone(phoneToUpdate);
         }
+
 
         if (dto.getName() != null) worker.setName(dto.getName());
         if (dto.getLastName() != null) worker.setLastName(dto.getLastName());
-        if (dto.getDni() != null) worker.setDni(dto.getDni());
         if (dto.getPosition() != null) worker.setPosition(dto.getPosition());
-        if (dto.getPhone() != null) worker.setPhone(dto.getPhone());
 
         worker.setUpdatedAt(Timestamp.valueOf(LocalDateTime.now()));
         worker = workerRepository.saveAndFlush(worker);
@@ -121,7 +127,10 @@ public class WorkerServiceImpl implements WorkerService {
             User user = worker.getUser();
             if (dto.getName() != null) user.setName(dto.getName());
             if (dto.getLastName() != null) user.setLastName(dto.getLastName());
-            if (dto.getEmail() != null) user.setEmail(dto.getEmail());
+            if (dto.getEmail() != null) {
+                String emailToUpdate = dto.getEmail().isBlank() ? null : dto.getEmail();
+                user.setEmail(emailToUpdate);
+            }
 
             userRepository.saveAndFlush(user);
         }
@@ -139,9 +148,9 @@ public class WorkerServiceImpl implements WorkerService {
     }
 
     @Override
-    public Page<WorkerDTO> getAllWorkers(String search, Pageable pageable) {
+    public Page<WorkerDTO> getAllWorkers(String search, Boolean active, Pageable pageable) {
         String finalSearch = (search == null) ? "" : search.trim();
-        return workerRepository.findWithFilters(finalSearch, pageable)
+        return workerRepository.findWithFilters(finalSearch, active, pageable)
                 .map(this::mapToDTO);
     }
 

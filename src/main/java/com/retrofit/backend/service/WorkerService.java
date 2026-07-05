@@ -11,7 +11,7 @@ public interface WorkerService {
     WorkerDTO createWorker(WorkerCreateDTO dto);
     WorkerDTO updateWorker(Long id, WorkerCreateDTO dto);
     WorkerDTO getWorkerById(Long id);
-    Page<WorkerDTO> getAllWorkers(String search, Pageable pageable);
+    Page<WorkerDTO> getAllWorkers(String search, Boolean active, Pageable pageable);
     List<WorkerDTO> getAvailableWorkers();
     void deleteWorker(Long id);
 }
