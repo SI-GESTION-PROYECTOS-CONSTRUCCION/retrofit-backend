@@ -44,6 +44,21 @@
             font-size: 11px;
         }
         
+        .apu-parent-header {
+            width: 100%;
+            border-bottom: 1px solid #000;
+            border-top: 1px solid #000;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            font-size: 12px;
+            background-color: #f4f4f4;
+        }
+        
+        .apu-parent-header td {
+            padding: 4px 5px;
+        }
+        
         .apu-yield {
             width: 100%;
             margin-bottom: 10px;
@@ -109,15 +124,23 @@
     </table>
 
     <div th:each="item : ${items}" class="apu-container">
-        <!-- Partida Header -->
-        <table class="apu-header">
+        
+        <!-- Parent Partida Header -->
+        <table class="apu-parent-header" th:if="${item.unit == null or item.unit == ''}">
+            <tr>
+                <td th:text="${item.code + '   ' + item.description}">01. PINTADO DEL PRIMERO PISO</td>
+            </tr>
+        </table>
+
+        <!-- Child Partida Header -->
+        <table class="apu-header" th:if="${item.unit != null and item.unit != ''}">
             <tr>
                 <td style="width: 15%;">Partida</td>
                 <td th:text="${item.code + '   ' + item.description}">01.01.01 ALMACÉN</td>
             </tr>
         </table>
         
-        <table class="apu-yield">
+        <table class="apu-yield" th:if="${item.unit != null and item.unit != ''}">
             <tr>
                 <td style="width: 15%;">Rendimiento</td>
                 <td th:text="${item.unit + '/DIA    MO. ' + #numbers.formatDecimal(item.laborYield, 1, 4) + '    EQ. ' + #numbers.formatDecimal(item.equipmentYield, 1, 4)}">m2/DIA MO 8.0000 EQ 8.0000</td>
@@ -127,7 +150,7 @@
         </table>
 
         <!-- Resources Table -->
-        <table class="resource-table">
+        <table class="resource-table" th:if="${item.unit != null and item.unit != ''}">
             <thead>
                 <tr>
                     <th style="width: 12%;">Código</th>
