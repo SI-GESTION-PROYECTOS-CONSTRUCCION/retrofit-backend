@@ -16,7 +16,7 @@ public interface InventoryService {
     InventoryTransactionResponseDTO registerInbound(InventoryTransactionRequestDTO request);
     InventoryTransactionResponseDTO registerOutbound(InventoryTransactionRequestDTO request);
     BigDecimal getCurrentStock(Long projectId, Long resourceId);
-    Page<StockSummaryDTO> getProjectStockSummary(Long projectId, Pageable pageable);
+    Page<StockSummaryDTO> getProjectStockSummary(Long projectId, String search, Pageable pageable);
     List<InventoryTransactionResponseDTO> getKardex(Long projectId, Long resourceId);
     List<PlannedResourceDTO> getPlannedMaterialsForProject(Long projectId);
     List<SupplyControlDTO> getSupplyControl(Long projectId, String status, String resourceName);

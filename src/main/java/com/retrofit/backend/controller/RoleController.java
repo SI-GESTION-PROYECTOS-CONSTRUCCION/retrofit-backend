@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -32,13 +33,13 @@ public class RoleController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('SECURITY_CREATE')")
-    public ResponseEntity<RoleResponseDto> createRole(@RequestBody RoleRequestDto dto) {
+    public ResponseEntity<RoleResponseDto> createRole(@Valid @RequestBody RoleRequestDto dto) {
         return new ResponseEntity<>(roleService.createRole(dto), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('SECURITY_UPDATE')")
-    public ResponseEntity<RoleResponseDto> updateRole(@PathVariable Long id, @RequestBody RoleRequestDto dto) {
+    public ResponseEntity<RoleResponseDto> updateRole(@PathVariable Long id, @Valid @RequestBody RoleRequestDto dto) {
         return ResponseEntity.ok(roleService.updateRole(id, dto));
     }
 

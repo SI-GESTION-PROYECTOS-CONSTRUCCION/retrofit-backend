@@ -63,9 +63,10 @@ public class InventoryController {
     @PreAuthorize("hasAuthority('INVENTORY_READ')")
     public ResponseEntity<Page<StockSummaryDTO>> getProjectStockSummary(
             @RequestParam Long projectId,
+            @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(inventoryService.getProjectStockSummary(projectId, PageRequest.of(page, size)));
+        return ResponseEntity.ok(inventoryService.getProjectStockSummary(projectId, search, PageRequest.of(page, size)));
     }
 
     @GetMapping("/planned-materials")

@@ -54,8 +54,9 @@ public interface InventoryTransactionRepository extends JpaRepository<InventoryT
             "FROM InventoryTransaction t " +
             "JOIN t.resource r " +
             "WHERE t.project.id = :projectId " +
+            "AND LOWER(r.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "GROUP BY t.project.id, r.id, r.name, r.unit")
-    Page<StockSummaryDTO> getProjectStockSummary(@Param("projectId") Long projectId, Pageable pageable);
+    Page<StockSummaryDTO> getProjectStockSummary(@Param("projectId") Long projectId, @Param("search") String search, Pageable pageable);
 
     // 6. Obtener la suma de INGRESOS (INBOUND) para los materiales de un proyecto (Para Control de Abastecimiento)
     @Query("SELECT r.id, SUM(t.quantity) " +

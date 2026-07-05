@@ -114,8 +114,9 @@ import org.springframework.transaction.annotation.Transactional;
 
         @Override
         @Transactional(readOnly = true)
-        public Page<StockSummaryDTO> getProjectStockSummary(Long projectId, Pageable pageable) {
-            return transactionRepository.getProjectStockSummary(projectId, pageable);
+        public Page<StockSummaryDTO> getProjectStockSummary(Long projectId, String search, Pageable pageable) {
+            String safeSearch = search == null ? "" : search;
+            return transactionRepository.getProjectStockSummary(projectId, safeSearch, pageable);
         }
 
         @Override

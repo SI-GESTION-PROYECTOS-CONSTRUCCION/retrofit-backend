@@ -113,7 +113,7 @@ public class PdfReportService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
 
-        List<StockSummaryDTO> stockSummary = inventoryTransactionRepository.getProjectStockSummary(projectId, Pageable.unpaged()).getContent();
+        List<StockSummaryDTO> stockSummary = inventoryTransactionRepository.getProjectStockSummary(projectId, "", Pageable.unpaged()).getContent();
         List<InventoryTransaction> transactions = inventoryTransactionRepository.findByProjectIdOrderByTransactionDateDesc(projectId);
 
         Context context = new Context();
