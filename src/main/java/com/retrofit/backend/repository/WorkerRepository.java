@@ -14,18 +14,24 @@ import java.util.Optional;
 
 @Repository
 public interface WorkerRepository extends JpaRepository<Worker, Long> {
-    Optional<Worker> findByDni(String dni);
-    Optional<Worker> findByUser(User user);
-    boolean existsByDni(String dni);
-    boolean existsByPhone(String phone);
-    @Query("SELECT w FROM Worker w WHERE " +
-            "(:search = '' OR LOWER(w.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-            "LOWER(w.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-            "LOWER(w.dni) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
-            "(:active IS NULL OR w.active = :active)")
-    Page<Worker> findWithFilters(@Param("search") String search, @Param("active") Boolean active, Pageable pageable);
-    @Query("SELECT w FROM Worker w WHERE w.id NOT IN " +
-            "(SELECT pa.worker.id FROM ProjectAssignment pa WHERE pa.active = true) " +
-            "AND w.active = true")
-    List<Worker> findAvailableWorkers();
+        Optional<Worker> findByDni(String dni);
+
+        Optional<Worker> findByUser(User user);
+
+        boolean existsByDni(String dni);
+
+        boolean existsByPhone(String phone);
+
+        @Query("SELECT w FROM Worker w WHERE " +
+                        "(:search = '' OR LOWER(w.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+                        "LOWER(w.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+                        "LOWER(w.dni) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
+                        "(:active IS NULL OR w.active = :active)")
+        Page<Worker> findWithFilters(@Param("search") String search, @Param("active") Boolean active,
+                        Pageable pageable);
+
+        @Query("SELECT w FROM Worker w WHERE w.id NOT IN " +
+                        "(SELECT pa.worker.id FROM ProjectAssignment pa WHERE pa.active = true) " +
+                        "AND w.active = true")
+        List<Worker> findAvailableWorkers();
 }
