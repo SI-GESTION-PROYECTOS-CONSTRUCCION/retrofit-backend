@@ -29,7 +29,6 @@ public class ProgressReportServiceImpl implements ProgressReportService {
     private final ProgressPhotoRepository photoRepository;
     private final ProjectRepository projectRepository;
     private final StorageService storageService;
-    private final ProgressReportResourceRepository progressReportResourceRepository;
     private final ResourceRepository resourceRepository;
     private final AuditService auditService;
 
@@ -40,13 +39,15 @@ public class ProgressReportServiceImpl implements ProgressReportService {
         ProjectItem item = itemRepository.findById(dto.getProjectItemId())
                 .orElseThrow(() -> new ResourceNotFoundException("Partida no encontrada"));
 
-        if (item.getProject().getStatus() == ProjectStatus.COMPLETED || item.getProject().getCurrentProgress() >= 100.0) {
+        if (item.getProject().getStatus() == ProjectStatus.COMPLETED
+                || item.getProject().getCurrentProgress() >= 100.0) {
             throw new IllegalStateException("El registro está cerrado. Este proyecto ya ha sido completado al 100%.");
         }
 
         // 2. VALIDACIÓN LÓGICA CRÍTICA
         Double alreadyExecuted = reportRepository.sumExecutedQuantityByItemId(item.getId());
-        if (alreadyExecuted == null) alreadyExecuted = 0.0; // Prevención de nulos
+        if (alreadyExecuted == null)
+            alreadyExecuted = 0.0; // Prevención de nulos
         Double remainingQuantity = item.getTotalQuantity() - alreadyExecuted;
 
         if (dto.getExecutedQuantity() > remainingQuantity) {
@@ -65,13 +66,15 @@ public class ProgressReportServiceImpl implements ProgressReportService {
             for (com.retrofit.backend.dto.ProgressReportResourceRequestDto resDto : dto.getUsedResources()) {
 
                 Resource resource = resourceRepository.findById(resDto.getResourceId())
-                        .orElseThrow(() -> new ResourceNotFoundException("Recurso no encontrado: " + resDto.getResourceId()));
+                        .orElseThrow(() -> new ResourceNotFoundException(
+                                "Recurso no encontrado: " + resDto.getResourceId()));
 
                 ProgressReportResource prr = new ProgressReportResource();
                 prr.setProgressReport(report);
                 prr.setResource(resource);
 
-                prr.setTheoreticalQuantity(resDto.getTheoreticalQuantity() != null ? resDto.getTheoreticalQuantity() : 0.0);
+                prr.setTheoreticalQuantity(
+                        resDto.getTheoreticalQuantity() != null ? resDto.getTheoreticalQuantity() : 0.0);
                 prr.setRealQuantity(resDto.getRealQuantity() != null ? resDto.getRealQuantity() : 0.0);
 
                 report.getUsedResources().add(prr);
@@ -101,7 +104,7 @@ public class ProgressReportServiceImpl implements ProgressReportService {
         // 5. ACTUALIZAR PROGRESO GLOBAL DEL PROYECTO
         updateProjectOverallProgress(item.getProject());
 
-        //  6. GRABAR AUDITORÍA MANUALMENTE
+        // 6. GRABAR AUDITORÍA MANUALMENTE
         // Usamos nuestro método refactorizado para que el JSON quede limpio y perfecto
         ProgressReportResponseDto estadoNuevo = mapToResponseDto(savedReport);
         auditService.logAction("CREATE", "Avances de Obra", savedReport.getId(), null, estadoNuevo);
@@ -109,7 +112,8 @@ public class ProgressReportServiceImpl implements ProgressReportService {
 
     private void updateProjectOverallProgress(Project project) {
         List<ProjectItem> allItems = project.getItems();
-        if (allItems == null || allItems.isEmpty()) return;
+        if (allItems == null || allItems.isEmpty())
+            return;
 
         double totalProgressSum = 0;
         int validItemsCount = 0;
@@ -155,19 +159,20 @@ public class ProgressReportServiceImpl implements ProgressReportService {
         projectRepository.save(project);
     }
 
-    public List<GroupedProgressReportDto> getFilteredAndGroupedReports(Long projectId, LocalDate startDate, LocalDate endDate, String itemCode) {
+    public List<GroupedProgressReportDto> getFilteredAndGroupedReports(Long projectId, LocalDate startDate,
+            LocalDate endDate, String itemCode) {
         String codeFilter = (itemCode != null && !itemCode.trim().isEmpty()) ? "%" + itemCode.trim() + "%" : null;
         List<ProgressReport> reports = reportRepository.findFilteredReports(projectId, startDate, endDate, codeFilter);
 
-        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", new java.util.Locale("es", "ES"));
+        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy",
+                new java.util.Locale("es", "ES"));
 
         java.util.Map<String, List<ProgressReportResponseDto>> groupedMap = reports.stream()
                 .map(this::mapToResponseDto)
                 .collect(Collectors.groupingBy(
                         dto -> dto.getReportDate().format(formatter).toUpperCase(),
                         java.util.LinkedHashMap::new,
-                        Collectors.toList()
-                ));
+                        Collectors.toList()));
 
         List<GroupedProgressReportDto> result = new ArrayList<>();
         for (java.util.Map.Entry<String, List<ProgressReportResponseDto>> entry : groupedMap.entrySet()) {
@@ -189,17 +194,18 @@ public class ProgressReportServiceImpl implements ProgressReportService {
         dto.setObservations(report.getObservations());
 
         if (report.getUsedResources() != null && !report.getUsedResources().isEmpty()) {
-            List<com.retrofit.backend.dto.ProgressReportResourceResponseDto> resourceDtos = report.getUsedResources().stream().map(prr -> {
-                com.retrofit.backend.dto.ProgressReportResourceResponseDto resDto = new com.retrofit.backend.dto.ProgressReportResourceResponseDto();
-                resDto.setId(prr.getId());
-                resDto.setResourceId(prr.getResource().getId());
-                resDto.setResourceName(prr.getResource().getName());
-                resDto.setResourceUnit(prr.getResource().getUnit());
-                resDto.setTheoreticalQuantity(prr.getTheoreticalQuantity());
-                resDto.setRealQuantity(prr.getRealQuantity());
-                resDto.setResourceType(prr.getResource().fetchResourceType());
-                return resDto;
-            }).collect(Collectors.toList());
+            List<com.retrofit.backend.dto.ProgressReportResourceResponseDto> resourceDtos = report.getUsedResources()
+                    .stream().map(prr -> {
+                        com.retrofit.backend.dto.ProgressReportResourceResponseDto resDto = new com.retrofit.backend.dto.ProgressReportResourceResponseDto();
+                        resDto.setId(prr.getId());
+                        resDto.setResourceId(prr.getResource().getId());
+                        resDto.setResourceName(prr.getResource().getName());
+                        resDto.setResourceUnit(prr.getResource().getUnit());
+                        resDto.setTheoreticalQuantity(prr.getTheoreticalQuantity());
+                        resDto.setRealQuantity(prr.getRealQuantity());
+                        resDto.setResourceType(prr.getResource().fetchResourceType());
+                        return resDto;
+                    }).collect(Collectors.toList());
 
             dto.setUsedResources(resourceDtos);
         }

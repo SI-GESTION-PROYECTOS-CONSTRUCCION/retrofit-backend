@@ -1,7 +1,6 @@
 package com.retrofit.backend.service.impl;
 
 import com.retrofit.backend.service.StorageService;
-import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -28,7 +27,8 @@ public class LocalStorageServiceImpl implements StorageService {
     @Override
     public String store(MultipartFile file) {
         try {
-            // Generamos un nombre único para evitar que fotos con el mismo nombre se chanquen
+            // Generamos un nombre único para evitar que fotos con el mismo nombre se
+            // chanquen
             String originalFilename = file.getOriginalFilename();
             String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
             String newFilename = UUID.randomUUID().toString() + extension;
@@ -49,7 +49,8 @@ public class LocalStorageServiceImpl implements StorageService {
         List<String> urls = new ArrayList<>();
         if (files != null) {
             for (MultipartFile file : files) {
-                if (!file.isEmpty()) urls.add(store(file));
+                if (!file.isEmpty())
+                    urls.add(store(file));
             }
         }
         return urls;

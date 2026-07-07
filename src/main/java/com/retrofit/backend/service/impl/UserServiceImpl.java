@@ -13,7 +13,6 @@ import com.retrofit.backend.repository.UserRepository;
 import com.retrofit.backend.repository.WorkerRepository;
 import com.retrofit.backend.service.AuditService;
 import com.retrofit.backend.service.UserService;
-import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -26,8 +25,6 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor

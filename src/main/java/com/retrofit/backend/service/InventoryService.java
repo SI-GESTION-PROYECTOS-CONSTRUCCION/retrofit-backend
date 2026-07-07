@@ -11,7 +11,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import com.retrofit.backend.dto.SupplyControlDTO;
-import java.util.List;
 
 public interface InventoryService {
     InventoryTransactionResponseDTO registerInbound(InventoryTransactionRequestDTO request);

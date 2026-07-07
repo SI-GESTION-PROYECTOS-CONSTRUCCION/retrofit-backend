@@ -5,14 +5,12 @@ import com.retrofit.backend.model.InventoryTransaction;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.math.BigDecimal;
 import java.util.List;
 
-@Repository
 public interface InventoryTransactionRepository extends JpaRepository<InventoryTransaction, Long> {
 
         // 1. Historial completo de un material en un proyecto (Para el Kardex de la

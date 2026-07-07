@@ -9,7 +9,6 @@ import com.retrofit.backend.repository.*;
 import com.retrofit.backend.service.ProjectItemService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -438,19 +437,22 @@ public class ProjectItemServiceImpl implements ProjectItemService {
             boolean isParent = (item.getTotalQuantity() == null || item.getTotalQuantity() == 0);
 
             if (!isParent) {
-                // 1. Si la partida ya tenía fechas, validamos si debemos "empujarla" (splice o heal)
+                // 1. Si la partida ya tenía fechas, validamos si debemos "empujarla" (splice o
+                // heal)
                 if (item.getStartDate() != null) {
                     Long currentPredId = item.getPredecessorId();
                     boolean modified = false;
 
-                    // A) HEALING DE BORRADO: Si su predecesor fue borrado, lo amarramos a la última hoja válida
+                    // A) HEALING DE BORRADO: Si su predecesor fue borrado, lo amarramos a la última
+                    // hoja válida
                     if (currentPredId != null && !validIds.contains(currentPredId)) {
                         item.setPredecessorId(prevLeafItemId);
                         currentPredId = prevLeafItemId;
                         modified = true;
                     }
 
-                    // B) HEALING DE INSERCIÓN: Si su predecesor fue reemplazado, actualizamos su flecha
+                    // B) HEALING DE INSERCIÓN: Si su predecesor fue reemplazado, actualizamos su
+                    // flecha
                     if (currentPredId != null && predecessorRemap.containsKey(currentPredId)) {
                         Long newPredId = predecessorRemap.get(currentPredId);
                         if (!currentPredId.equals(newPredId)) {
@@ -459,7 +461,8 @@ public class ProjectItemServiceImpl implements ProjectItemService {
                         }
                     }
 
-                    // C) DATE SNAP: Si está encadenado a la hoja anterior, o es el primer nodo absoluto, debe pegar en currentDate
+                    // C) DATE SNAP: Si está encadenado a la hoja anterior, o es el primer nodo
+                    // absoluto, debe pegar en currentDate
                     boolean shouldSnap = false;
                     if (item.getPredecessorId() == null && prevLeafItemId == null) {
                         shouldSnap = true; // El primer ítem del proyecto
@@ -469,7 +472,8 @@ public class ProjectItemServiceImpl implements ProjectItemService {
 
                     if (shouldSnap) {
                         if (!item.getStartDate().equals(currentDate)) {
-                            long daysShifted = java.time.temporal.ChronoUnit.DAYS.between(item.getStartDate(), currentDate);
+                            long daysShifted = java.time.temporal.ChronoUnit.DAYS.between(item.getStartDate(),
+                                    currentDate);
                             item.setStartDate(item.getStartDate().plusDays(daysShifted));
                             if (item.getEndDate() != null) {
                                 item.setEndDate(item.getEndDate().plusDays(daysShifted));
@@ -499,7 +503,8 @@ public class ProjectItemServiceImpl implements ProjectItemService {
                     if (prevLeafItemId != null) {
                         predecessorRemap.put(prevLeafItemId, item.getId());
                     }
-                    // Si algo ya había sido redirigido a prevLeafItemId, lo redirigimos a este nuevo también
+                    // Si algo ya había sido redirigido a prevLeafItemId, lo redirigimos a este
+                    // nuevo también
                     for (Map.Entry<Long, Long> entry : predecessorRemap.entrySet()) {
                         if (entry.getValue().equals(prevLeafItemId)) {
                             entry.setValue(item.getId());
