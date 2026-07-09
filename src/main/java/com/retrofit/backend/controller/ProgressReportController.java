@@ -2,7 +2,6 @@ package com.retrofit.backend.controller;
 
 import com.retrofit.backend.dto.GroupedProgressReportDto;
 import com.retrofit.backend.dto.ProgressReportRequestDto;
-import com.retrofit.backend.dto.ProgressReportResponseDto;
 import com.retrofit.backend.service.ProgressReportService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +32,6 @@ public class ProgressReportController {
         return new ResponseEntity<>("Reporte de avance registrado correctamente", HttpStatus.CREATED);
     }
 
-
     @GetMapping("/project/{projectId}")
     @PreAuthorize("hasAuthority('REPORT_READ')")
     public ResponseEntity<List<GroupedProgressReportDto>> getReportsByProject(
@@ -42,7 +40,8 @@ public class ProgressReportController {
             @RequestParam(required = false) java.time.LocalDate endDate,
             @RequestParam(required = false) String itemCode) {
 
-        List<GroupedProgressReportDto> groupedReports = progressReportService.getFilteredAndGroupedReports(projectId, startDate, endDate, itemCode);
+        List<GroupedProgressReportDto> groupedReports = progressReportService.getFilteredAndGroupedReports(projectId,
+                startDate, endDate, itemCode);
         return ResponseEntity.ok(groupedReports);
     }
 }

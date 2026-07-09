@@ -3,7 +3,6 @@ package com.retrofit.backend.controller;
 import com.retrofit.backend.auth.AuthRequest;
 import com.retrofit.backend.auth.AuthResponse;
 import com.retrofit.backend.dto.AdminDTO;
-import com.retrofit.backend.dto.UserCreateDTO;
 import com.retrofit.backend.dto.UserDTO;
 import com.retrofit.backend.dto.UserProfileDTO;
 import com.retrofit.backend.model.User;
@@ -20,7 +19,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -35,7 +33,7 @@ public class AuthController {
     private final UserDetailsService userDetailsService;
 
     @PostMapping("/registerAdmin")
-    public ResponseEntity<UserDTO> register(@RequestBody AdminDTO request){
+    public ResponseEntity<UserDTO> register(@RequestBody AdminDTO request) {
         return ResponseEntity.ok(userService.registerAdmin(request));
     }
 
@@ -44,7 +42,6 @@ public class AuthController {
         String username = userDetails.getUsername();
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-
 
         List<String> permisos = user.getRole().getPermissions().stream()
                 .map(permission -> permission.getName())
@@ -63,7 +60,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody AuthRequest request){
+    public ResponseEntity<?> login(@RequestBody AuthRequest request) {
         final String jwt = authService.login(request);
         return ResponseEntity.ok(new AuthResponse(jwt));
     }
