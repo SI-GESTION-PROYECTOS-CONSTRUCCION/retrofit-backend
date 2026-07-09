@@ -2,7 +2,6 @@ package com.retrofit.backend.exceptions;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -16,7 +15,8 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<Map<String, String>> handleResourceNotFoundException(ResourceNotFoundException ex, WebRequest request) {
+    public ResponseEntity<Map<String, String>> handleResourceNotFoundException(ResourceNotFoundException ex,
+            WebRequest request) {
         Map<String, String> body = new HashMap<>();
         body.put("status", "404");
         body.put("error", "Not Found");
@@ -24,8 +24,9 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<Map<String, String>> handleBadCredentialsException(BadCredentialsException ex, WebRequest request) {
+    @ExceptionHandler({ org.springframework.security.core.AuthenticationException.class })
+    public ResponseEntity<Map<String, String>> handleAuthenticationException(
+            org.springframework.security.core.AuthenticationException ex, WebRequest request) {
         Map<String, String> body = new HashMap<>();
         body.put("status", "401");
         body.put("error", "Unauthorized");
@@ -52,30 +53,25 @@ public class GlobalExceptionHandler {
 
         if (ex.getMessage().contains("Project code already exists")) {
             body.put("code", "Este código de proyecto ya está registrado");
-        }
-        else if (ex.getMessage().contains("Estado de proyecto inválido")) {
+        } else if (ex.getMessage().contains("Estado de proyecto inválido")) {
             body.put("status", "El estado seleccionado no es válido");
-        }
-        else if (ex.getMessage().contains("Prioridad de proyecto inválida")) {
+        } else if (ex.getMessage().contains("Prioridad de proyecto inválida")) {
             body.put("priority", "La prioridad seleccionada no es válida");
         }
 
         // Workers
         else if (ex.getMessage().contains("Worker DNI already exists")) {
             body.put("dni", "Este DNI ya se encuentra registrado.");
-        }
-        else if (ex.getMessage().contains("Worker phone already exists")) {
+        } else if (ex.getMessage().contains("Worker phone already exists")) {
             body.put("phone", "Este número de teléfono ya está en uso.");
-        }
-        else if (ex.getMessage().contains("User email is required for account")) {
+        } else if (ex.getMessage().contains("User email is required for account")) {
             body.put("email", "El correo es obligatorio para crear la cuenta.");
         }
 
         // Users
         else if (ex.getMessage().contains("User username already exists")) {
             body.put("username", "Este nombre de usuario ya está en uso.");
-        }
-        else if (ex.getMessage().contains("User email already exists")) {
+        } else if (ex.getMessage().contains("User email already exists")) {
             body.put("email", "Este correo electrónico ya está registrado.");
         }
 
@@ -84,5 +80,15 @@ public class GlobalExceptionHandler {
         }
 
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleAllExceptions(Exception ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("status", 500);
+        body.put("error", ex.getClass().getSimpleName());
+        body.put("message", ex.getMessage() != null ? ex.getMessage() : "Error interno del servidor");
+        ex.printStackTrace(); // Para que aparezca en los logs
+        return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

@@ -9,12 +9,13 @@ import com.retrofit.backend.model.User;
 import com.retrofit.backend.repository.UserRepository;
 import com.retrofit.backend.service.AuthService;
 import com.retrofit.backend.service.UserService;
+import com.retrofit.backend.service.RefreshTokenService;
 import com.retrofit.backend.auth.jwt.JwtUtil;
+import com.retrofit.backend.auth.TokenRefreshRequest;
+import com.retrofit.backend.model.RefreshToken;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -31,6 +32,7 @@ public class AuthController {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
+    private final RefreshTokenService refreshTokenService;
 
     @PostMapping("/registerAdmin")
     public ResponseEntity<UserDTO> register(@RequestBody AdminDTO request) {
@@ -62,23 +64,22 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest request) {
         final String jwt = authService.login(request);
-        return ResponseEntity.ok(new AuthResponse(jwt));
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(request.getUsername());
+        return ResponseEntity.ok(new AuthResponse(jwt, refreshToken.getToken()));
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<?> refreshToken(HttpServletRequest request) {
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String jwt = authHeader.substring(7);
-            try {
-                String username = jwtUtil.extractUsernameFromExpiredToken(jwt);
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                String newJwt = jwtUtil.generateToken(userDetails);
-                return ResponseEntity.ok(new AuthResponse(newJwt));
-            } catch (Exception e) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido o firmas incorrectas");
-            }
-        }
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token no proporcionado");
+    public ResponseEntity<?> refreshToken(@RequestBody TokenRefreshRequest request) {
+        String requestRefreshToken = request.getRefreshToken();
+        return refreshTokenService.findByToken(requestRefreshToken)
+                .map(refreshTokenService::verifyExpiration)
+                .map(RefreshToken::getUser)
+                .map(user -> {
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
+                    String token = jwtUtil.generateToken(userDetails);
+                    RefreshToken newRefreshToken = refreshTokenService.createRefreshToken(user.getUsername());
+                    return ResponseEntity.ok(new AuthResponse(token, newRefreshToken.getToken()));
+                })
+                .orElseThrow(() -> new RuntimeException("Refresh token is not in database!"));
     }
 }
