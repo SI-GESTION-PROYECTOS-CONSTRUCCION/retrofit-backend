@@ -44,6 +44,11 @@ public class ProgressReportServiceImpl implements ProgressReportService {
             throw new IllegalStateException("El registro está cerrado. Este proyecto ya ha sido completado al 100%.");
         }
 
+        if (dto.getReportDate().isBefore(item.getProject().getStartDate())) {
+            throw new IllegalArgumentException("La fecha del avance (" + dto.getReportDate() + 
+                ") no puede ser anterior a la fecha de inicio del proyecto (" + item.getProject().getStartDate() + ").");
+        }
+
         // 2. VALIDACIÓN LÓGICA CRÍTICA
         Double alreadyExecuted = reportRepository.sumExecutedQuantityByItemId(item.getId());
         if (alreadyExecuted == null)

@@ -8,6 +8,7 @@ import lombok.Data;
 @Data
 public class ResourceRequestDto {
     @NotBlank(message = "El nombre es obligatorio")
+    @jakarta.validation.constraints.Pattern(regexp = "^(?=.*[a-zA-ZñÑáéíóúÁÉÍÓÚ])[a-zA-ZñÑáéíóúÁÉÍÓÚ0-9 ]+$", message = "Debe contener letras, y puede contener números y espacios. No se admiten puros números.")
     private String name;
 
     @NotBlank(message = "La unidad es obligatoria")

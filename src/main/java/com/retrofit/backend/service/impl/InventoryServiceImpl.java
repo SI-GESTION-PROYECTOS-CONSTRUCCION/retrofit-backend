@@ -81,13 +81,13 @@ public class InventoryServiceImpl implements InventoryService {
                 .orElseThrow(() -> new RuntimeException("Recurso no encontrado"));
 
         ProjectItem projectItem = projectItemRepository.findById(request.getProjectItemId())
-                .orElseThrow(() -> new RuntimeException("Partida no encontrada"));
+                .orElseThrow(() -> new IllegalArgumentException("Partida no encontrada"));
 
         // 2. REGLA DE NEGOCIO: Validar que haya stock suficiente
         BigDecimal currentStock = getCurrentStock(request.getProjectId(), request.getResourceId());
         if (currentStock.compareTo(request.getQuantity()) < 0) {
-            throw new RuntimeException("Stock insuficiente. Stock actual: " + currentStock + " " + resource.getUnit() +
-                    ", Cantidad solicitada: " + request.getQuantity());
+            throw new IllegalArgumentException("Stock insuficiente. Stock actual: " + currentStock + " " + resource.getUnit() +
+                    ". Cantidad solicitada: " + request.getQuantity() + " " + resource.getUnit());
         }
 
         String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();

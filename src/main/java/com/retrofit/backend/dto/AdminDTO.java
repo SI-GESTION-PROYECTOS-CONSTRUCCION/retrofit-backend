@@ -14,6 +14,8 @@ public class AdminDTO {
     private String username;
     private String password;
     private String role;
+    @jakarta.validation.constraints.Pattern(regexp = "^[a-zA-ZñÑáéíóúÁÉÍÓÚ ]+$", message = "Solo se permiten letras")
     private String name;
+    @jakarta.validation.constraints.Pattern(regexp = "^[a-zA-ZñÑáéíóúÁÉÍÓÚ ]+$", message = "Solo se permiten letras")
     private String lastName;
 }

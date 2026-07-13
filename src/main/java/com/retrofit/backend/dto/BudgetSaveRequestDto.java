@@ -6,7 +6,10 @@ import java.util.List;
 
 @Data
 public class BudgetSaveRequestDto {
+    @jakarta.validation.constraints.PositiveOrZero(message = "El porcentaje de gastos generales no puede ser negativo")
     private Double generalExpensesPercentage;
+    
+    @jakarta.validation.constraints.PositiveOrZero(message = "El porcentaje de utilidad no puede ser negativo")
     private Double utilityPercentage;
     
     @Valid
