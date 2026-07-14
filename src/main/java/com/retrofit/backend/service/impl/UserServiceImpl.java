@@ -53,6 +53,7 @@ public class UserServiceImpl implements UserService {
                 .name(admin.getName())
                 .lastName(admin.getLastName())
                 .active(true)
+                .requirePasswordChange(true)
                 .createdAt(Timestamp.valueOf(LocalDateTime.now()))
                 .build();
         return mapToDTO(adminRepository.save(user));
@@ -98,6 +99,7 @@ public class UserServiceImpl implements UserService {
         userToSave.setPassword(passwordEncoder.encode(dto.getPassword()));
         userToSave.setRole(roleEntity);
         userToSave.setActive(true);
+        userToSave.setRequirePasswordChange(true);
         userToSave.setCreatedAt(Timestamp.valueOf(LocalDateTime.now()));
 
         User savedUser = userRepository.save(userToSave);
@@ -198,6 +200,17 @@ public class UserServiceImpl implements UserService {
         return mapToDTO(user);
     }
 
+    @Override
+    public void changePassword(String username, String newPassword) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con el username: " + username));
+        
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setRequirePasswordChange(false);
+        user.setUpdatedAt(Timestamp.valueOf(LocalDateTime.now()));
+        userRepository.save(user);
+    }
+
     private UserDTO mapToDTO(User user) {
         return UserDTO.builder()
                 .id(user.getId())
@@ -207,6 +220,7 @@ public class UserServiceImpl implements UserService {
                 .lastName(user.getLastName())
                 .role(user.getRole().getName())
                 .active(user.isActive())
+                .requirePasswordChange(user.isRequirePasswordChange())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();

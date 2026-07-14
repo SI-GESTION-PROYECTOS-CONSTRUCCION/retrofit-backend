@@ -19,4 +19,5 @@ public class UserProfileDTO {
     private String lastName;
     private String role;
     private List<String> permissions;
+    private boolean requirePasswordChange;
 }

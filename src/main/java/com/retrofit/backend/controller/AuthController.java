@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
@@ -56,6 +57,7 @@ public class AuthController {
                 .lastName(user.getLastName())
                 .role(user.getRole().getName())
                 .permissions(permisos)
+                .requirePasswordChange(user.isRequirePasswordChange())
                 .build();
 
         return ResponseEntity.ok(dto);
@@ -81,5 +83,17 @@ public class AuthController {
                     return ResponseEntity.ok(new AuthResponse(token, newRefreshToken.getToken()));
                 })
                 .orElseThrow(() -> new RuntimeException("Refresh token is not in database!"));
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@AuthenticationPrincipal UserDetails userDetails, @RequestBody Map<String, String> request) {
+        String newPassword = request.get("newPassword");
+        if (newPassword == null || newPassword.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "La nueva contraseña es requerida"));
+        }
+        
+        userService.changePassword(userDetails.getUsername(), newPassword);
+        
+        return ResponseEntity.ok(Map.of("message", "Contraseña cambiada exitosamente"));
     }
 }

@@ -14,4 +14,5 @@ public interface UserService {
     void deleteUser(long id);
     Page<UserDTO> getAllUsers(String search, String roleName, Boolean active, Pageable pageable);
     UserDTO getUserById(long id);
+    void changePassword(String username, String newPassword);
 }

@@ -19,6 +19,7 @@ public class UserDTO {
     private String lastName;
     private String role;
     private boolean active;
+    private boolean requirePasswordChange;
     private Timestamp createdAt;
     private Timestamp updatedAt;
 }

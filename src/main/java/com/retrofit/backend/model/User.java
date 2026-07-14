@@ -42,6 +42,9 @@ public class User {
     @Column(unique = false)
     private boolean active;
 
+    @Column(unique = false, columnDefinition = "boolean default true")
+    private boolean requirePasswordChange = true;
+
     @Column(unique = false)
     private Timestamp createdAt;
 
