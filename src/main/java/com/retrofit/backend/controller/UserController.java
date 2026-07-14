@@ -45,6 +45,13 @@ public class UserController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping("/{id}/reactivate")
+    @PreAuthorize("hasAuthority('USER_UPDATE') or hasAuthority('USER_DELETE')")
+    public ResponseEntity<Void> reactivateUser(@PathVariable Long id){
+        userService.reactivateUser(id);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping
     @PreAuthorize("hasAuthority('USER_READ')")
     public ResponseEntity<Page<UserDTO>> getAll(

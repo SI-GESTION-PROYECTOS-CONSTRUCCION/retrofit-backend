@@ -193,6 +193,16 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @AuditChange(action = "REACTIVATE", module = "Usuarios")
+    public void reactivateUser(long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
+
+        user.setActive(true);
+        userRepository.save(user);
+    }
+
+    @Override
     public UserDTO getUserById(long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con el ID: " + id));
