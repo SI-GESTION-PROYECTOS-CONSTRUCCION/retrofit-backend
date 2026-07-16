@@ -130,6 +130,20 @@
 			<artifactId>jsoup</artifactId>
 			<version>1.17.2</version>
 		</dependency>
+		<!-- Selenium para pruebas E2E -->
+		<dependency>
+			<groupId>org.seleniumhq.selenium</groupId>
+			<artifactId>selenium-java</artifactId>
+			<version>4.18.1</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- Guava requerido por Selenium en VS Code -->
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>33.0.0-jre</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
