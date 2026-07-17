@@ -75,21 +75,10 @@ public class UserServiceImpl implements UserService {
         }
 
         User userToSave;
-        switch (dto.getRole()) {
-            case "ADMIN":
-                userToSave = Admin.builder().build();
-                break;
-
-            case "INGENIERO_RESIDENTE":
-                userToSave = new User();
-                break;
-
-            case "ALMACENERO":
-                userToSave = new User();
-                break;
-
-            default:
-                throw new IllegalArgumentException("El rol " + dto.getRole() + " no tiene una entidad asociada.");
+        if ("ADMIN".equalsIgnoreCase(dto.getRole())) {
+            userToSave = Admin.builder().build();
+        } else {
+            userToSave = new User();
         }
 
         userToSave.setEmail(dto.getEmail());
@@ -214,7 +203,7 @@ public class UserServiceImpl implements UserService {
     public void changePassword(String username, String newPassword) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con el username: " + username));
-        
+
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setRequirePasswordChange(false);
         user.setUpdatedAt(Timestamp.valueOf(LocalDateTime.now()));
