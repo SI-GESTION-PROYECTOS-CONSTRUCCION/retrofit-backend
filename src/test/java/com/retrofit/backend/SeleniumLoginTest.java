@@ -32,7 +32,7 @@ public class SeleniumLoginTest {
             Thread.sleep(3000);
 
             WebElement btnLogin = driver.findElement(By.xpath("//button[@type='submit']"));
-            btnLogin.click();
+            ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", btnLogin);
 
             WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
             wait.until(ExpectedConditions.presenceOfElementLocated(By.className("dashboard-container")));

@@ -3,6 +3,7 @@ package com.retrofit.backend;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.safari.SafariDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
@@ -23,11 +24,12 @@ public class SeleniumBudgetTest {
             driver.get("https://retrofit-nxaez.ondigitalocean.app/login");
             driver.findElement(By.id("username")).sendKeys("SuperAdmin@retrofit");
             driver.findElement(By.id("password")).sendKeys("SuperAdmin2026@retrofit");
-            driver.findElement(By.xpath("//button[@type='submit']")).click();
+            WebElement btnLogin = driver.findElement(By.xpath("//button[@type='submit']"));
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", btnLogin);
             wait.until(ExpectedConditions.presenceOfElementLocated(By.className("dashboard-container")));
             System.out.println("Login superado");
 
-            driver.get("https://retrofit-nxaez.ondigitalocean.app/portafolio/proyecto/PRJ-TEST-001?tab=PRESUPUESTO");
+            driver.get("https://retrofit-nxaez.ondigitalocean.app/portafolio/proyecto/PRJ-TEST-002?tab=PRESUPUESTO");
 
             wait.until(ExpectedConditions.presenceOfElementLocated(By.className("excel-table")));
             Thread.sleep(3000);
@@ -59,7 +61,7 @@ public class SeleniumBudgetTest {
             if (btnGuardar == null || !btnGuardar.isDisplayed()) {
                 btnGuardar = driver.findElement(By.xpath("//button[contains(@class, 'btn-dark')]"));
             }
-            btnGuardar.click();
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", btnGuardar);
 
             System.out.println("Paso 3: Botón de guardar presionado");
             Thread.sleep(8000);

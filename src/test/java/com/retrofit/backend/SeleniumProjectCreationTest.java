@@ -23,7 +23,8 @@ public class SeleniumProjectCreationTest {
             driver.get("https://retrofit-nxaez.ondigitalocean.app/login");
             driver.findElement(By.id("username")).sendKeys("SuperAdmin@retrofit");
             driver.findElement(By.id("password")).sendKeys("SuperAdmin2026@retrofit");
-            driver.findElement(By.xpath("//button[@type='submit']")).click();
+            WebElement btnLogin = driver.findElement(By.xpath("//button[@type='submit']"));
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", btnLogin);
             wait.until(ExpectedConditions.presenceOfElementLocated(By.className("dashboard-container")));
             System.out.println("Login superado");
 
@@ -32,18 +33,18 @@ public class SeleniumProjectCreationTest {
             System.out.println("Paso 1: Portafolio de Proyectos cargado");
             WebElement btnNuevo = wait.until(
                     ExpectedConditions.elementToBeClickable(By.xpath("//button[contains(., 'Nuevo Proyecto')]")));
-            btnNuevo.click();
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", btnNuevo);
             wait.until(ExpectedConditions.presenceOfElementLocated(By.className("modal-container")));
             System.out.println("Modal de creación abierto");
 
-            driver.findElement(By.xpath("//input[@formControlName='code']")).sendKeys("PRJ-TEST-001");
+            driver.findElement(By.xpath("//input[@formControlName='code']")).sendKeys("PRJ-TEST-002");
             driver.findElement(By.xpath("//input[@formControlName='name']")).sendKeys("Proyecto Automatizado Selenium");
             driver.findElement(By.xpath("//input[@formControlName='client']")).sendKeys("Cliente Test SA");
             driver.findElement(By.xpath("//input[@formControlName='location']")).sendKeys("Lima Peru");
 
             WebElement dateInput = driver.findElement(By.xpath("//input[@formControlName='startDate']"));
             ((JavascriptExecutor) driver).executeScript(
-                    "arguments[0].value='2026-07-16';" +
+                    "arguments[0].value='2026-07-21';" +
                             "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));" +
                             "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));",
                     dateInput);
@@ -57,12 +58,13 @@ public class SeleniumProjectCreationTest {
             Select prioritySelect = new Select(driver.findElement(By.xpath("//select[@formControlName='priority']")));
             prioritySelect.selectByValue("HIGH");
             Select managerSelect = new Select(driver.findElement(By.xpath("//select[@formControlName='managerId']")));
-            managerSelect.selectByIndex(1);
+            managerSelect.selectByIndex(2);
 
             System.out.println("Paso 2: Formulario llenado");
             Thread.sleep(3000);
 
-            driver.findElement(By.className("btn-submit")).click();
+            WebElement btnSubmit = driver.findElement(By.className("btn-submit"));
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", btnSubmit);
             wait.until(ExpectedConditions.invisibilityOfElementLocated(By.className("modal-container")));
             System.out.println("✅ PRUEBA EXITOSA: El proyecto se guardó correctamente en la base de datos.");
             Thread.sleep(4000);
