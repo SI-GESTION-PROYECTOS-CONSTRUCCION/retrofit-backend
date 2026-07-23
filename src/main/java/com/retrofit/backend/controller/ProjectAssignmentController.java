@@ -21,7 +21,7 @@ public class ProjectAssignmentController {
     private final ProjectAssignmentService assignmentService;
 
     @PostMapping
-    @PreAuthorize("hasAuthority('WORKER_CREATE')")
+    @PreAuthorize("hasAuthority('WORKER_UPDATE')")
     public ResponseEntity<ProjectAssignmentDTO> assign(@RequestBody ProjectAssignmentDTO dto) {
         return new ResponseEntity<>(assignmentService.assignWorker(dto), HttpStatus.CREATED);
     }
