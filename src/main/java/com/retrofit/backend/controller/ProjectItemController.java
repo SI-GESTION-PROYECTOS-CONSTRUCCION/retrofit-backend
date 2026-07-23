@@ -25,7 +25,7 @@ public class ProjectItemController {
     }
 
     @PutMapping("/{id}/gantt")
-    @PreAuthorize("hasAuthority('PROJECT_READ')")
+    @PreAuthorize("hasAuthority('PROJECT_UPDATE')")
     public ResponseEntity<Void> updateGanttDates(
             @PathVariable Long id,
             @RequestBody GanttUpdateDto dto) {
