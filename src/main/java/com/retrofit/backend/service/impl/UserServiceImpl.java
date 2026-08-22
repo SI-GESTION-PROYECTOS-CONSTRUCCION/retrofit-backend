@@ -39,7 +39,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDTO registerAdmin(AdminDTO admin) {
         if (adminRepository.findByEmail(admin.getEmail()).isPresent()) {
-            throw new IllegalArgumentException("User email already exists");
+            throw new com.retrofit.backend.exceptions.DuplicateResourceException("email", "Este correo electrónico ya está registrado.");
         }
 
         RoleE adminRole = roleRepository.findByName("ADMIN")
@@ -67,11 +67,11 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado: " + dto.getRole()));
 
         if (userRepository.findByUsername(dto.getUsername()).isPresent()) {
-            throw new IllegalArgumentException("User username already exists");
+            throw new com.retrofit.backend.exceptions.DuplicateResourceException("username", "Este nombre de usuario ya está en uso.");
         }
 
         if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
-            throw new IllegalArgumentException("User email already exists");
+            throw new com.retrofit.backend.exceptions.DuplicateResourceException("email", "Este correo electrónico ya está registrado.");
         }
 
         User userToSave;
@@ -113,7 +113,7 @@ public class UserServiceImpl implements UserService {
         if (dto.getUsername() != null && !dto.getUsername().isBlank()) {
             if (!userFound.getUsername().equals(dto.getUsername())) {
                 if (userRepository.findByUsername(dto.getUsername()).isPresent()) {
-                    throw new IllegalArgumentException("User username already exists");
+                    throw new com.retrofit.backend.exceptions.DuplicateResourceException("username", "Este nombre de usuario ya está en uso.");
                 }
                 userFound.setUsername(dto.getUsername());
             }
@@ -122,14 +122,11 @@ public class UserServiceImpl implements UserService {
         if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
             if (!userFound.getEmail().equals(dto.getEmail())) {
                 if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
-                    throw new IllegalArgumentException("User email already exists");
+                    throw new com.retrofit.backend.exceptions.DuplicateResourceException("email", "Este correo electrónico ya está registrado.");
                 }
                 userFound.setEmail(dto.getEmail());
             }
         }
-
-        if (dto.getEmail() != null && !dto.getEmail().isBlank())
-            userFound.setEmail(dto.getEmail());
         if (dto.getName() != null && !dto.getName().isBlank())
             userFound.setName(dto.getName());
         if (dto.getLastName() != null && !dto.getLastName().isBlank())

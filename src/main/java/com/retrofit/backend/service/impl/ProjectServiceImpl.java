@@ -60,7 +60,7 @@ public class ProjectServiceImpl implements ProjectService {
     @AuditChange(action = "CREATE", module = "Proyectos")
     public ProjectResponseDto createProject(ProjectRequestDto dto) {
         if(projectRepository.existsByCode(dto.getCode())) {
-            throw new IllegalArgumentException("Project code already exists");
+            throw new com.retrofit.backend.exceptions.DuplicateResourceException("code", "Este código de proyecto ya está registrado");
         }
         Project project = new Project();
         return saveProjectFromDto(project, dto);
@@ -79,9 +79,7 @@ public class ProjectServiceImpl implements ProjectService {
         projectRepository.findByCode(dto.getCode())
                 .ifPresent(existingProject -> {
                     if (!existingProject.getId().equals(id)) {
-                        // Usamos exactamente el mismo mensaje que en crear,
-                        // para que el GlobalExceptionHandler pinte el error en el frontend de forma mágica.
-                        throw new IllegalArgumentException("Project code already exists");
+                        throw new com.retrofit.backend.exceptions.DuplicateResourceException("code", "Este código de proyecto ya está registrado");
                     }
                 });
 
@@ -126,13 +124,13 @@ public class ProjectServiceImpl implements ProjectService {
         try {
             project.setStatus(ProjectStatus.valueOf(dto.getStatus().toUpperCase()));
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Estado de proyecto inválido: " + dto.getStatus());
+            throw new com.retrofit.backend.exceptions.InvalidEnumException("status", "El estado seleccionado no es válido");
         }
 
         try {
             project.setPriority(ProjectPriority.valueOf(dto.getPriority().toUpperCase()));
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Prioridad de proyecto inválida: " + dto.getPriority());
+            throw new com.retrofit.backend.exceptions.InvalidEnumException("priority", "La prioridad seleccionada no es válida");
         }
 
         if(dto.getManagerId() != null) {

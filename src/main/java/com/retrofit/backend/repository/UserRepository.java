@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
@@ -17,6 +18,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
         List<User> findByRole_Name(String roleName);
 
+        @EntityGraph(attributePaths = {"role"})
         @Query("SELECT u FROM User u WHERE " +
                         "(:search = '' OR LOWER(u.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
                         "LOWER(u.username) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
