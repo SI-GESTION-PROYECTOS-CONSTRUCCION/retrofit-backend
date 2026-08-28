@@ -2,6 +2,7 @@ package com.retrofit.backend.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -23,7 +24,7 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id", nullable = false)
     private RoleE role;
 
@@ -43,6 +44,7 @@ public class User {
     private boolean active;
 
     @Column(unique = false, columnDefinition = "boolean default true")
+    @Builder.Default
     private boolean requirePasswordChange = true;
 
     @Column(unique = false)
