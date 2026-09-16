@@ -26,6 +26,12 @@ public class DataInitializer implements CommandLineRunner {
     private final AdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
 
+    @org.springframework.beans.factory.annotation.Value("${app.security.initial-admin-password}")
+    private String initialAdminPassword;
+
+    @org.springframework.beans.factory.annotation.Value("${app.security.initial-superadmin-password}")
+    private String initialSuperAdminPassword;
+
     @Override
     public void run(String... args) {
         System.out.println("Iniciando carga de data inicial de Seguridad Dinámica (RBAC)...");
@@ -47,7 +53,7 @@ public class DataInitializer implements CommandLineRunner {
         // 1. MÓDULO: PROYECTOS (ProjectController / ProjectItemController)
         // ==========================================
         Permission pCreate = createPermissionIfNotExists("PROJECT_CREATE");
-        Permission pRead   = createPermissionIfNotExists("PROJECT_READ");
+        Permission pRead = createPermissionIfNotExists("PROJECT_READ");
         Permission pUpdate = createPermissionIfNotExists("PROJECT_UPDATE");
         Permission pDelete = createPermissionIfNotExists("PROJECT_DELETE");
 
@@ -55,7 +61,7 @@ public class DataInitializer implements CommandLineRunner {
         // 2. MÓDULO: RECURSOS (Material, Labor, Equipment, Resource Controllers)
         // ==========================================
         Permission rCreate = createPermissionIfNotExists("RESOURCE_CREATE");
-        Permission rRead   = createPermissionIfNotExists("RESOURCE_READ");
+        Permission rRead = createPermissionIfNotExists("RESOURCE_READ");
         Permission rUpdate = createPermissionIfNotExists("RESOURCE_UPDATE");
         Permission rDelete = createPermissionIfNotExists("RESOURCE_DELETE");
 
@@ -63,15 +69,16 @@ public class DataInitializer implements CommandLineRunner {
         // 3. MÓDULO: REPORTES DE AVANCE (ProgressReportController)
         // ==========================================
         Permission repCreate = createPermissionIfNotExists("REPORT_CREATE");
-        Permission repRead   = createPermissionIfNotExists("REPORT_READ");
+        Permission repRead = createPermissionIfNotExists("REPORT_READ");
         Permission repUpdate = createPermissionIfNotExists("REPORT_UPDATE");
         Permission repDelete = createPermissionIfNotExists("REPORT_DELETE");
 
         // ==========================================
-        // 4. MÓDULO: TRABAJADORES Y ASIGNACIONES (WorkerController / ProjectAssignmentController)
+        // 4. MÓDULO: TRABAJADORES Y ASIGNACIONES (WorkerController /
+        // ProjectAssignmentController)
         // ==========================================
         Permission wCreate = createPermissionIfNotExists("WORKER_CREATE");
-        Permission wRead   = createPermissionIfNotExists("WORKER_READ");
+        Permission wRead = createPermissionIfNotExists("WORKER_READ");
         Permission wUpdate = createPermissionIfNotExists("WORKER_UPDATE");
         Permission wDelete = createPermissionIfNotExists("WORKER_DELETE");
 
@@ -79,7 +86,7 @@ public class DataInitializer implements CommandLineRunner {
         // 5. MÓDULO: USUARIOS DEL SISTEMA (UserController)
         // ==========================================
         Permission uCreate = createPermissionIfNotExists("USER_CREATE");
-        Permission uRead   = createPermissionIfNotExists("USER_READ");
+        Permission uRead = createPermissionIfNotExists("USER_READ");
         Permission uUpdate = createPermissionIfNotExists("USER_UPDATE");
         Permission uDelete = createPermissionIfNotExists("USER_DELETE");
 
@@ -87,7 +94,7 @@ public class DataInitializer implements CommandLineRunner {
         // 6. MÓDULO: SEGURIDAD Y ROLES
         // ==========================================
         Permission secCreate = createPermissionIfNotExists("SECURITY_CREATE");
-        Permission secRead   = createPermissionIfNotExists("SECURITY_READ");
+        Permission secRead = createPermissionIfNotExists("SECURITY_READ");
         Permission secUpdate = createPermissionIfNotExists("SECURITY_UPDATE");
         Permission secDelete = createPermissionIfNotExists("SECURITY_DELETE");
 
@@ -95,15 +102,14 @@ public class DataInitializer implements CommandLineRunner {
         // 7. MÓDULO: INVENTARIO (Almacén)
         // ==========================================
         Permission invCreate = createPermissionIfNotExists("INVENTORY_CREATE");
-        Permission invRead   = createPermissionIfNotExists("INVENTORY_READ");
+        Permission invRead = createPermissionIfNotExists("INVENTORY_READ");
         Permission invUpdate = createPermissionIfNotExists("INVENTORY_UPDATE");
         Permission invDelete = createPermissionIfNotExists("INVENTORY_DELETE");
 
         // ==========================================
         // 8. MÓDULO: AUDITORÍA (AuditController)
         // ==========================================
-        Permission auditRead   = createPermissionIfNotExists("AUDIT_READ");
-
+        Permission auditRead = createPermissionIfNotExists("AUDIT_READ");
 
         // ==========================================
         // ASIGNACIÓN A ROLES
@@ -118,8 +124,7 @@ public class DataInitializer implements CommandLineRunner {
                 uCreate, uRead, uUpdate, uDelete,
                 secCreate, secRead, secUpdate, secDelete,
                 invCreate, invRead, invUpdate, invDelete,
-                auditRead
-        ));
+                auditRead));
 
         // ROL: INGENIERO RESIDENTE (Control Operativo de Campo)
         createRoleIfNotExists("INGENIERO_RESIDENTE", "Ingeniero Residente de Obra", Set.of(
@@ -127,18 +132,15 @@ public class DataInitializer implements CommandLineRunner {
                 rRead,
                 repCreate, repRead, repUpdate,
                 wRead, wUpdate,
-                invRead, invCreate
-        ));
+                invRead, invCreate));
 
         // ROL: ALMACENERO (Control Logístico)
         createRoleIfNotExists("ALMACENERO", "Almacenero de Obra", Set.of(
                 pRead,
                 rRead,
                 repCreate, repRead,
-                invCreate, invRead
-        ));
+                invCreate, invRead));
     }
-
 
     private Permission createPermissionIfNotExists(String name) {
         return permissionRepository.findByName(name)
@@ -163,12 +165,12 @@ public class DataInitializer implements CommandLineRunner {
             Admin admin1 = Admin.builder()
                     .email("admin@retrofit.com")
                     .username("Admin@Retrofit")
-                    .password(passwordEncoder.encode("Admin2026@retrofit"))
+                    .password(passwordEncoder.encode(initialAdminPassword))
                     .role(adminRole)
                     .name("Admin")
                     .lastName("Admin")
                     .active(true)
-                    .requirePasswordChange(false)
+                    .requirePasswordChange(true)
                     .createdAt(Timestamp.valueOf(LocalDateTime.now()))
                     .build();
             adminRepository.save(admin1);
@@ -181,7 +183,7 @@ public class DataInitializer implements CommandLineRunner {
             Admin admin2 = Admin.builder()
                     .email("super.admin@retrofit.com")
                     .username("SuperAdmin@Retrofit")
-                    .password(passwordEncoder.encode("SuperAdmin2026@retrofit"))
+                    .password(passwordEncoder.encode(initialSuperAdminPassword))
                     .role(adminRole)
                     .name("Super")
                     .lastName("Admin")
