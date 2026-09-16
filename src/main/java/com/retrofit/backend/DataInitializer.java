@@ -26,8 +26,20 @@ public class DataInitializer implements CommandLineRunner {
     private final AdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
 
+    @org.springframework.beans.factory.annotation.Value("${app.security.initial-admin-username}")
+    private String initialAdminUsername;
+
+    @org.springframework.beans.factory.annotation.Value("${app.security.initial-admin-email}")
+    private String initialAdminEmail;
+
     @org.springframework.beans.factory.annotation.Value("${app.security.initial-admin-password}")
     private String initialAdminPassword;
+
+    @org.springframework.beans.factory.annotation.Value("${app.security.initial-superadmin-username}")
+    private String initialSuperAdminUsername;
+
+    @org.springframework.beans.factory.annotation.Value("${app.security.initial-superadmin-email}")
+    private String initialSuperAdminEmail;
 
     @org.springframework.beans.factory.annotation.Value("${app.security.initial-superadmin-password}")
     private String initialSuperAdminPassword;
@@ -160,11 +172,11 @@ public class DataInitializer implements CommandLineRunner {
                 .orElseThrow(() -> new RuntimeException("Rol ADMIN no existe en la base de datos"));
 
         // 1. Admin general
-        if (userRepository.findByEmail("admin@retrofit.com").isEmpty()
-                && userRepository.findByUsername("Admin@Retrofit").isEmpty()) {
+        if (userRepository.findByEmail(initialAdminEmail).isEmpty()
+                && userRepository.findByUsername(initialAdminUsername).isEmpty()) {
             Admin admin1 = Admin.builder()
-                    .email("admin@retrofit.com")
-                    .username("Admin@Retrofit")
+                    .email(initialAdminEmail)
+                    .username(initialAdminUsername)
                     .password(passwordEncoder.encode(initialAdminPassword))
                     .role(adminRole)
                     .name("Admin")
@@ -174,15 +186,15 @@ public class DataInitializer implements CommandLineRunner {
                     .createdAt(Timestamp.valueOf(LocalDateTime.now()))
                     .build();
             adminRepository.save(admin1);
-            System.out.println("Usuario inicial 'Admin@Retrofit' creado correctamente.");
+            System.out.println("Usuario inicial '" + initialAdminUsername + "' creado correctamente.");
         }
 
         // 2. Super Admin
-        if (userRepository.findByEmail("super.admin@retrofit.com").isEmpty()
-                && userRepository.findByUsername("SuperAdmin@Retrofit").isEmpty()) {
+        if (userRepository.findByEmail(initialSuperAdminEmail).isEmpty()
+                && userRepository.findByUsername(initialSuperAdminUsername).isEmpty()) {
             Admin admin2 = Admin.builder()
-                    .email("super.admin@retrofit.com")
-                    .username("SuperAdmin@Retrofit")
+                    .email(initialSuperAdminEmail)
+                    .username(initialSuperAdminUsername)
                     .password(passwordEncoder.encode(initialSuperAdminPassword))
                     .role(adminRole)
                     .name("Super")
@@ -192,7 +204,7 @@ public class DataInitializer implements CommandLineRunner {
                     .createdAt(Timestamp.valueOf(LocalDateTime.now()))
                     .build();
             adminRepository.save(admin2);
-            System.out.println("Usuario inicial 'SuperAdmin@Retrofit' creado correctamente.");
+            System.out.println("Usuario inicial '" + initialSuperAdminUsername + "' creado correctamente.");
         }
     }
 }
