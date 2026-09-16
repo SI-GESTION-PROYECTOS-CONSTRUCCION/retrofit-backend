@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <style>
+        @page { size: A3 landscape; margin: 12mm 10mm 14mm 10mm; }
+        * { box-sizing: border-box; }
+        body { margin: 0; color: #193b4a; font-family: Arial, Helvetica, sans-serif; font-size: 9px; }
+        .header { border-bottom: 3px solid #20a59f; padding-bottom: 10px; margin-bottom: 12px; }
+        .brand { color: #20a59f; font-size: 10px; font-weight: bold; letter-spacing: 2px; }
+        h1 { margin: 4px 0 2px; color: #184a62; font-size: 22px; letter-spacing: -.4px; }
+        .subtitle { color: #6d858c; font-size: 10px; }
+        .meta { width: 100%; margin: 10px 0 14px; border-collapse: collapse; }
+        .meta td { width: 25%; padding: 7px 9px; border: 1px solid #d9e5e7; background: #f7faf9; }
+        .meta .label { display: block; margin-bottom: 3px; color: #7d969c; font-size: 7px; font-weight: bold; letter-spacing: 1px; }
+        .meta strong { color: #184a62; font-size: 10px; }
+        .scale { width: 100%; margin-bottom: 3px; border-collapse: collapse; table-layout: fixed; }
+        .scale td { padding: 6px 8px; border: 1px solid #d9e5e7; background: #eaf6f4; color: #256c73; font-size: 8px; font-weight: bold; }
+        .scale .scale-label { width: 31%; background: #184a62; color: #fff; text-transform: uppercase; letter-spacing: .8px; }
+        .scale .timeline-scale { position: relative; width: 69%; height: 24px; padding: 0; overflow: hidden; }
+        .scale-tick { position: absolute; top: 6px; width: 26mm; color: #256c73; font-size: 7px; text-align: center; white-space: nowrap; }
+        .row { width: 100%; min-height: 26px; border-bottom: 1px solid #e7eff0; page-break-inside: avoid; }
+        .row td { height: 26px; padding: 4px 7px; vertical-align: middle; }
+        .row .task { width: 31%; border-left: 1px solid #d9e5e7; border-right: 1px solid #d9e5e7; }
+        .row .track { position: relative; width: 69%; height: 26px; padding: 0; overflow: hidden; background: #fbfdfd; }
+        .track-tick { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px solid #e4eeee; }
+        .task-code { display: inline-block; min-width: 45px; margin-right: 5px; color: #20a59f; font-size: 8px; font-weight: bold; }
+        .task-name { color: #315764; font-size: 8px; }
+        .parent .task { background: #edf5f5; }
+        .parent .task-name { color: #184a62; font-weight: bold; }
+        .bar { position: absolute; top: 5px; height: 14px; min-width: 10px; border-radius: 4px; background: #28a9a1; }
+        .parent .bar { height: 16px; background: #184a62; }
+        .progress { position: absolute; top: 0; left: 0; height: 100%; border-radius: 4px; background: #0e6f71; }
+        .bar-label { position: absolute; top: 2px; left: 5px; color: #fff; font-size: 7px; font-weight: bold; white-space: nowrap; }
+        .footer { margin-top: 13px; padding-top: 7px; border-top: 1px solid #d9e5e7; color: #81979c; font-size: 7px; }
+        .legend { float: right; }
+        .legend span { margin-left: 14px; }
+        .legend i { display: inline-block; width: 8px; height: 8px; margin-right: 4px; border-radius: 2px; vertical-align: -1px; }
+        .legend .group { background: #184a62; }
+        .legend .task-bar { background: #28a9a1; }
+        .legend .done { background: #0e6f71; }
+        .report-page { page-break-after: always; }
+        .report-page:last-child { page-break-after: auto; }
+        .continuation-header { margin-bottom: 10px; padding-bottom: 7px; border-bottom: 2px solid #20a59f; color: #184a62; }
+        .continuation-header strong { font-size: 12px; }
+        .continuation-header span { float: right; color: #6d858c; font-size: 8px; }
+        .page-footer { margin-top: 13px; padding-top: 7px; border-top: 1px solid #d9e5e7; color: #81979c; font-size: 7px; }
+        .footer-meta { margin-top: 4px; }
+        .page-footer .legend { float: left; }
+        .page-number { float: right; color: #315764; }
+    </style>
+</head>
+<body>
+    <section class="report-page" th:each="page, pageStat : ${pages}">
+        <div class="header" th:if="${pageStat.first}">
+            <div class="brand">RETROFIT · GESTIÓN DE PROYECTOS</div>
+            <h1>CRONOGRAMA DE EJECUCIÓN</h1>
+            <div class="subtitle" th:text="${project.name}">Proyecto</div>
+        </div>
+        <div class="continuation-header" th:unless="${pageStat.first}">
+            <strong>CRONOGRAMA DE EJECUCIÓN</strong>
+            <span th:text="${project.code + ' · ' + project.name}">PRY-001 · Proyecto</span>
+        </div>
+
+        <table class="meta" th:if="${pageStat.first}">
+            <tr>
+                <td><span class="label">CÓDIGO</span><strong th:text="${project.code}">PRY-001</strong></td>
+                <td><span class="label">CLIENTE</span><strong th:text="${project.client != null ? project.client : 'Sin cliente'}">Cliente</strong></td>
+                <td><span class="label">PERIODO PROGRAMADO</span><strong th:text="${timelineStart + ' — ' + timelineEnd}">01/01/2026 — 31/01/2026</strong></td>
+                <td><span class="label">EMISIÓN</span><strong th:text="${currentDate}">01/01/2026</strong></td>
+            </tr>
+        </table>
+
+        <table class="scale">
+            <tr>
+                <td class="scale-label">Partidas y actividades</td>
+                <td class="timeline-scale">
+                    <span class="scale-tick" th:each="tick : ${timelineTicks}" th:style="${tick.labelStyle}" th:text="${tick.label}">01 ene</span>
+                </td>
+            </tr>
+        </table>
+
+        <table class="row" th:each="item : ${page}">
+            <tr th:classappend="${item.parent} ? 'parent' : ''">
+                <td class="task" th:style="${item.paddingLeft}">
+                    <span class="task-code" th:text="${item.code}">01.01</span>
+                    <span class="task-name" th:text="${item.name}">Actividad</span>
+                </td>
+                <td class="track">
+                    <span class="track-tick" th:each="tick : ${timelineTicks}" th:style="${tick.positionStyle}"></span>
+                    <div class="bar" th:style="${item.barStyle}">
+                        <div class="progress" th:style="'width: ' + item.progress + '%;'">
+                        </div>
+                        <span class="bar-label" th:if="${item.widthPercent >= 5}" th:text="${item.progress + '%'}">0%</span>
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <div class="page-footer">
+            <div>Documento generado por Retrofit. Las barras muestran la duración programada y el segmento oscuro representa el avance físico registrado.</div>
+            <div class="footer-meta">
+                <span class="legend"><span><i class="group"></i>Grupo</span><span><i class="task-bar"></i>Partida</span><span><i class="done"></i>Avance</span></span>
+                <span class="page-number" th:text="${'Página ' + pageStat.count + ' de ' + totalPages}">Página 1 de 1</span>
+            </div>
+        </div>
+    </section>
+</body>
+</html>

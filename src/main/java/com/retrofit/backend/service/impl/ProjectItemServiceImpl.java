@@ -342,6 +342,8 @@ public class ProjectItemServiceImpl implements ProjectItemService {
         ProjectItem item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Partida no encontrada"));
 
+        validatePredecessor(item, dto.getPredecessorId());
+
         // 1. Calculamos cuántos días se está moviendo la barra hacia el futuro o pasado
         long daysShifted = 0;
         if (item.getStartDate() != null && dto.getStartDate() != null) {
@@ -375,6 +377,34 @@ public class ProjectItemServiceImpl implements ProjectItemService {
 
         // Registrar en el log de auditoría los cambios en el cronograma
         auditService.logAction("UPDATE", "Gantt", itemId, null, dto);
+    }
+
+    private void validatePredecessor(ProjectItem item, Long predecessorId) {
+        if (predecessorId == null) {
+            return;
+        }
+        if (item.getId().equals(predecessorId)) {
+            throw new IllegalArgumentException("Una partida no puede depender de sí misma.");
+        }
+
+        ProjectItem predecessor = itemRepository.findById(predecessorId)
+                .orElseThrow(() -> new IllegalArgumentException("La partida predecesora no existe."));
+        if (!item.getProject().getId().equals(predecessor.getProject().getId())) {
+            throw new IllegalArgumentException("La partida predecesora debe pertenecer al mismo proyecto.");
+        }
+
+        Set<Long> visited = new HashSet<>();
+        ProjectItem current = predecessor;
+        while (current != null) {
+            if (!visited.add(current.getId())) {
+                throw new IllegalArgumentException("La relación de dependencia contiene un ciclo.");
+            }
+            if (current.getId().equals(item.getId())) {
+                throw new IllegalArgumentException("La relación generaría un ciclo entre actividades.");
+            }
+            Long nextId = current.getPredecessorId();
+            current = nextId == null ? null : itemRepository.findById(nextId).orElse(null);
+        }
     }
 
     private void cascadeDateShiftInMemory(Long parentId, long daysShifted, Map<Long, List<ProjectItem>> childrenGraph,
@@ -461,27 +491,6 @@ public class ProjectItemServiceImpl implements ProjectItemService {
                         }
                     }
 
-                    // C) DATE SNAP: Si está encadenado a la hoja anterior, o es el primer nodo
-                    // absoluto, debe pegar en currentDate
-                    boolean shouldSnap = false;
-                    if (item.getPredecessorId() == null && prevLeafItemId == null) {
-                        shouldSnap = true; // El primer ítem del proyecto
-                    } else if (item.getPredecessorId() != null && item.getPredecessorId().equals(prevLeafItemId)) {
-                        shouldSnap = true; // Secuencia ininterrumpida
-                    }
-
-                    if (shouldSnap) {
-                        if (!item.getStartDate().equals(currentDate)) {
-                            long daysShifted = java.time.temporal.ChronoUnit.DAYS.between(item.getStartDate(),
-                                    currentDate);
-                            item.setStartDate(item.getStartDate().plusDays(daysShifted));
-                            if (item.getEndDate() != null) {
-                                item.setEndDate(item.getEndDate().plusDays(daysShifted));
-                            }
-                            modified = true;
-                        }
-                    }
-
                     if (modified) {
                         itemsToUpdate.add(item);
                     }
@@ -546,6 +555,7 @@ public class ProjectItemServiceImpl implements ProjectItemService {
             dto.setCode(item.getCode());
             // --- INYECCIÓN DE JERARQUÍA ---
             dto.setParentId(myParentId);
+            dto.setLevel(currentLevel);
             dto.setType(isParent ? "project" : "task");
             // ------------------------------
 

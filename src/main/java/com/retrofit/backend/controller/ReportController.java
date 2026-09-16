@@ -87,4 +87,24 @@ public class ReportController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
+    @GetMapping("/cronograma")
+    public ResponseEntity<byte[]> downloadGanttReport(@PathVariable Long projectId) {
+        try {
+            byte[] pdfBytes = pdfReportService.generateGanttReport(projectId);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("attachment", "cronograma_proyecto_" + projectId + ".pdf");
+
+            auditService.logAction("EXPORT", "Cronograma", projectId, null, "Descarga del cronograma del proyecto en PDF");
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(pdfBytes);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }

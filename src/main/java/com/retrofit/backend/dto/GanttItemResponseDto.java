@@ -16,6 +16,7 @@ public class GanttItemResponseDto {
 
     private Integer baseDurationDays;
     private Long parentId;
+    private Integer level;
     private String type;
     private Double currentProgressPercentage;
 }
