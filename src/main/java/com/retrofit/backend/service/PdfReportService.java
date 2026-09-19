@@ -127,7 +127,7 @@ public class PdfReportService {
                 .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
 
         List<StockSummaryDTO> stockSummary = inventoryTransactionRepository.getProjectStockSummary(projectId, "", Pageable.unpaged()).getContent();
-        List<InventoryTransaction> transactions = inventoryTransactionRepository.findByProjectIdOrderByTransactionDateDesc(projectId);
+        List<InventoryTransaction> transactions = inventoryTransactionRepository.findByProjectIdWithDetailsOrderByTransactionDateDesc(projectId);
 
         Context context = new Context();
         context.setVariable("logoBase64", getLogoBase64());
@@ -369,12 +369,18 @@ public class PdfReportService {
 
     private record DateRange(LocalDate start, LocalDate end) {}
 
-    private String getLogoBase64() {
+    private String cachedLogoBase64 = null;
+
+    private synchronized String getLogoBase64() {
+        if (cachedLogoBase64 != null) {
+            return cachedLogoBase64;
+        }
         try {
             java.io.InputStream is = new org.springframework.core.io.ClassPathResource("templates/logo_base64.txt").getInputStream();
-            return new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            cachedLogoBase64 = new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
         } catch (Exception e) {
-            return ""; // Fallback si no lo encuentra
+            cachedLogoBase64 = ""; // Fallback si no lo encuentra
         }
+        return cachedLogoBase64;
     }
 }

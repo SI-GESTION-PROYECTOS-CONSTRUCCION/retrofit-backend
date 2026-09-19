@@ -1,6 +1,7 @@
 package com.retrofit.backend.repository;
 
 import com.retrofit.backend.model.ProgressReport;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -22,6 +23,7 @@ public interface ProgressReportRepository extends JpaRepository<ProgressReport, 
                "GROUP BY pr.projectItem.id")
         List<Object[]> sumEarnedValueByProjectIdGroupedByItemId(@Param("projectId") Long projectId);
 
+        @EntityGraph(attributePaths = {"projectItem", "usedResources.resource"})
         @Query("SELECT pr FROM ProgressReport pr WHERE pr.projectItem.project.id = :projectId " +
                         "AND (CAST(:startDate AS date) IS NULL OR pr.reportDate >= :startDate) " +
                         "AND (CAST(:endDate AS date) IS NULL OR pr.reportDate <= :endDate) " +

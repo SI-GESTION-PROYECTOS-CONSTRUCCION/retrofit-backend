@@ -85,6 +85,10 @@ public class ProjectItemServiceImpl implements ProjectItemService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado"));
 
+        if (project.getCurrentProgress() != null && project.getCurrentProgress() > 0) {
+            throw new IllegalStateException("No se puede modificar el presupuesto de una obra en ejecución.");
+        }
+
         if (request.getGeneralExpensesPercentage() != null) {
             project.setGeneralExpensesPercentage(request.getGeneralExpensesPercentage());
         }
@@ -188,6 +192,10 @@ public class ProjectItemServiceImpl implements ProjectItemService {
         ProjectItem item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Partida no encontrada"));
 
+        if (item.getProject() != null && item.getProject().getCurrentProgress() != null && item.getProject().getCurrentProgress() > 0) {
+            throw new IllegalStateException("No se puede modificar el APU de una obra en ejecución.");
+        }
+
         item.setLaborYield(laborYield != null ? laborYield : 0.0);
         item.setEquipmentYield(equipmentYield != null ? equipmentYield : 0.0);
         item = itemRepository.saveAndFlush(item);
@@ -198,10 +206,21 @@ public class ProjectItemServiceImpl implements ProjectItemService {
 
         double calculatedUnitPrice = 0.0;
 
-        // 3. LA MAGIA MATEMÁTICA
+        // 3. Pre-cargar recursos en batch para evitar N+1 queries en bucle
+        Set<Long> resourceIds = dtos.stream()
+                .map(ProjectItemResourceRequestDto::getResourceId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Long, Resource> resourceMap = resourceRepository.findAllById(resourceIds).stream()
+                .collect(Collectors.toMap(Resource::getId, r -> r));
+
+        // 4. LA MAGIA MATEMÁTICA
         for (ProjectItemResourceRequestDto dto : dtos) {
-            Resource resource = resourceRepository.findById(dto.getResourceId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Recurso no encontrado"));
+            Resource resource = resourceMap.get(dto.getResourceId());
+            if (resource == null) {
+                throw new ResourceNotFoundException("Recurso no encontrado: " + dto.getResourceId());
+            }
 
             ProjectItemResource pir = new ProjectItemResource();
             pir.setProjectItem(item);

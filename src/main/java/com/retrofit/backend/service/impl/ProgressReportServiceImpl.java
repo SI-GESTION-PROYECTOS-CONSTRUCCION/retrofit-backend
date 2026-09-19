@@ -123,15 +123,20 @@ public class ProgressReportServiceImpl implements ProgressReportService {
         double totalProgressSum = 0;
         int validItemsCount = 0;
 
+        List<Object[]> executedList = reportRepository.sumExecutedQuantityByProjectIdGroupedByItemId(project.getId());
+        java.util.Map<Long, Double> executedMap = new java.util.HashMap<>();
+        for (Object[] row : executedList) {
+            Long itemId = (Long) row[0];
+            Double qty = (Double) row[1];
+            executedMap.put(itemId, qty != null ? qty : 0.0);
+        }
+
         for (ProjectItem i : allItems) {
             if (i.getTotalQuantity() == null || i.getTotalQuantity() == 0) {
                 continue;
             }
 
-            Double executed = reportRepository.sumExecutedQuantityByItemId(i.getId());
-            if (executed == null) {
-                executed = 0.0;
-            }
+            Double executed = executedMap.getOrDefault(i.getId(), 0.0);
 
             double itemPercentage = (executed / i.getTotalQuantity()) * 100;
             totalProgressSum += itemPercentage;

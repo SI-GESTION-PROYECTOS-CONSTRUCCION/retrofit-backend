@@ -3,6 +3,7 @@ package com.retrofit.backend.repository;
 import com.retrofit.backend.model.AuditLog;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,12 +12,14 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
+        @EntityGraph(attributePaths = {"user", "user.role"})
         Page<AuditLog> findAllByOrderByActionDateDesc(Pageable pageable);
 
         long countByActionDateBetween(LocalDateTime startOfDay, LocalDateTime endOfDay);
 
         long countByAction(String action);
 
+        @EntityGraph(attributePaths = {"user", "user.role"})
         @Query("SELECT a FROM AuditLog a WHERE " +
                         "(:search IS NULL OR :search = '' OR LOWER(a.user.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(a.user.username) LIKE LOWER(CONCAT('%', :search, '%'))) AND "
                         +

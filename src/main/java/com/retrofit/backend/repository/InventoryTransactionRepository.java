@@ -46,7 +46,14 @@ public interface InventoryTransactionRepository extends JpaRepository<InventoryT
                         @Param("startDate") java.time.LocalDateTime startDate,
                         @Param("endDate") java.time.LocalDateTime endDate);
 
-        // 4. Obtener todas las transacciones de un proyecto (Para reportes)
+        // 4. Obtener todas las transacciones de un proyecto (Para reportes con JOIN FETCH para evitar N+1)
+        @Query("SELECT t FROM InventoryTransaction t " +
+               "JOIN FETCH t.resource " +
+               "LEFT JOIN FETCH t.projectItem " +
+               "WHERE t.project.id = :projectId " +
+               "ORDER BY t.transactionDate DESC")
+        List<InventoryTransaction> findByProjectIdWithDetailsOrderByTransactionDateDesc(@Param("projectId") Long projectId);
+
         List<InventoryTransaction> findByProjectIdOrderByTransactionDateDesc(Long projectId);
 
         @Query("SELECT new com.retrofit.backend.dto.StockSummaryDTO(" +

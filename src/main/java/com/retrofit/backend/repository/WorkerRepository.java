@@ -4,6 +4,7 @@ import com.retrofit.backend.model.User;
 import com.retrofit.backend.model.Worker;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,6 +21,7 @@ public interface WorkerRepository extends JpaRepository<Worker, Long> {
 
         boolean existsByPhone(String phone);
 
+        @EntityGraph(attributePaths = {"user", "user.role"})
         @Query("SELECT w FROM Worker w WHERE " +
                         "(:search = '' OR LOWER(w.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
                         "LOWER(w.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
@@ -28,6 +30,7 @@ public interface WorkerRepository extends JpaRepository<Worker, Long> {
         Page<Worker> findWithFilters(@Param("search") String search, @Param("active") Boolean active,
                         Pageable pageable);
 
+        @EntityGraph(attributePaths = {"user", "user.role"})
         @Query("SELECT w FROM Worker w WHERE w.id NOT IN " +
                         "(SELECT pa.worker.id FROM ProjectAssignment pa WHERE pa.active = true) " +
                         "AND w.active = true")

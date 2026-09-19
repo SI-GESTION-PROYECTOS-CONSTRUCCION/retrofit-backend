@@ -2,6 +2,7 @@ package com.retrofit.backend.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,9 +30,11 @@ public class ProgressReport {
     @Column(columnDefinition = "TEXT")
     private String observations;
 
+    @BatchSize(size = 50)
     @OneToMany(mappedBy = "progressReport", cascade = CascadeType.ALL)
     private List<ProgressPhoto> photos;
 
+    @BatchSize(size = 50)
     @OneToMany(mappedBy = "progressReport", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProgressReportResource> usedResources = new ArrayList<>();
 
