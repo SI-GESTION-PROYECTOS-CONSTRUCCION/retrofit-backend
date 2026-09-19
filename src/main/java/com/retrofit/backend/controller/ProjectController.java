@@ -78,6 +78,14 @@ public class ProjectController {
         return new ResponseEntity<>(projectService.createProject(dto), HttpStatus.CREATED);
     }
 
+    @PostMapping("/{id}/duplicate")
+    @PreAuthorize("hasAuthority('PROJECT_CREATE')")
+    public ResponseEntity<ProjectResponseDto> duplicate(
+            @PathVariable Long id,
+            @Validated({Default.class, ProjectRequestDto.OnCreate.class}) @RequestBody ProjectRequestDto dto) {
+        return new ResponseEntity<>(projectService.duplicateProject(id, dto), HttpStatus.CREATED);
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('PROJECT_UPDATE')")
     public ResponseEntity<ProjectResponseDto> update(@PathVariable Long id, @Valid @RequestBody ProjectRequestDto dto) {

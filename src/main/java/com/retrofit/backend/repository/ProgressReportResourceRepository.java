@@ -17,6 +17,15 @@ public interface ProgressReportResourceRepository extends JpaRepository<Progress
             "WHERE pi.project.id = :projectId AND (:exactCode IS NULL OR pi.code = :exactCode OR pi.code LIKE :prefixCode)")
     Double calculateActualCostByProjectId(@Param("projectId") Long projectId, @Param("exactCode") String exactCode, @Param("prefixCode") String prefixCode);
 
+    // Calcula el Costo Real (AC) agrupado por partida para todo el proyecto en 1 sola consulta
+    @Query("SELECT pr.projectItem.id, COALESCE(SUM(prr.realQuantity * r.basePrice), 0.0) " +
+            "FROM ProgressReportResource prr " +
+            "JOIN prr.progressReport pr " +
+            "JOIN prr.resource r " +
+            "WHERE pr.projectItem.project.id = :projectId " +
+            "GROUP BY pr.projectItem.id")
+    List<Object[]> sumActualCostByProjectIdGroupedByItemId(@Param("projectId") Long projectId);
+
     // Calcula el Costo Real (AC) acumulado de una partida específica
     @Query("SELECT COALESCE(SUM(prr.realQuantity * r.basePrice), 0.0) " +
             "FROM ProgressReportResource prr " +

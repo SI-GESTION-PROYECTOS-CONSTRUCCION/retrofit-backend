@@ -120,11 +120,12 @@ public class ProjectServiceImplTest {
     void testCreateProject_DuplicateCode() {
         when(projectRepository.existsByCode(requestDto.getCode())).thenReturn(true);
 
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+        com.retrofit.backend.exceptions.DuplicateResourceException exception = assertThrows(com.retrofit.backend.exceptions.DuplicateResourceException.class, () -> {
             projectService.createProject(requestDto);
         });
 
-        assertEquals("Project code already exists", exception.getMessage());
+        assertEquals("Este código de proyecto ya está registrado", exception.getMessage());
+        assertEquals("code", exception.getField());
         verify(projectRepository, never()).save(any(Project.class));
     }
 

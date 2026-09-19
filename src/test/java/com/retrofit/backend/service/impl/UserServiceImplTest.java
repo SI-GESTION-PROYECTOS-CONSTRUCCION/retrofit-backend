@@ -85,11 +85,12 @@ public class UserServiceImplTest {
     void testRegisterAdmin_EmailAlreadyExists() {
         when(adminRepository.findByEmail(adminDTO.getEmail())).thenReturn(Optional.of(new Admin()));
 
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+        com.retrofit.backend.exceptions.DuplicateResourceException exception = assertThrows(com.retrofit.backend.exceptions.DuplicateResourceException.class, () -> {
             userService.registerAdmin(adminDTO);
         });
 
-        assertEquals("User email already exists", exception.getMessage());
+        assertEquals("Este correo electrónico ya está registrado.", exception.getMessage());
+        assertEquals("email", exception.getField());
         verify(adminRepository, never()).save(any(Admin.class));
     }
 

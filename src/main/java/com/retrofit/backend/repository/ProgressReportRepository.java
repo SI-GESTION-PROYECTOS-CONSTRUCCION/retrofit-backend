@@ -16,6 +16,12 @@ public interface ProgressReportRepository extends JpaRepository<ProgressReport, 
         @Query("SELECT pr.projectItem.id, COALESCE(SUM(pr.executedQuantity), 0) FROM ProgressReport pr WHERE pr.projectItem.project.id = :projectId GROUP BY pr.projectItem.id")
         List<Object[]> sumExecutedQuantityByProjectIdGroupedByItemId(@Param("projectId") Long projectId);
 
+        @Query("SELECT pr.projectItem.id, COALESCE(SUM(pr.executedQuantity * pi.unitPrice), 0.0) " +
+               "FROM ProgressReport pr JOIN pr.projectItem pi " +
+               "WHERE pi.project.id = :projectId " +
+               "GROUP BY pr.projectItem.id")
+        List<Object[]> sumEarnedValueByProjectIdGroupedByItemId(@Param("projectId") Long projectId);
+
         @Query("SELECT pr FROM ProgressReport pr WHERE pr.projectItem.project.id = :projectId " +
                         "AND (CAST(:startDate AS date) IS NULL OR pr.reportDate >= :startDate) " +
                         "AND (CAST(:endDate AS date) IS NULL OR pr.reportDate <= :endDate) " +

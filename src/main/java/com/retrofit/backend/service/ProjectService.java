@@ -11,6 +11,7 @@ public interface ProjectService {
     ProjectResponseDto getProjectById(Long id);
     ProjectResponseDto getProjectByCode(String code);
     ProjectResponseDto createProject(ProjectRequestDto dto);
+    ProjectResponseDto duplicateProject(Long sourceProjectId, ProjectRequestDto dto);
     ProjectResponseDto updateProject(Long id, ProjectRequestDto dto);
     void deleteProject(Long id);
 }
