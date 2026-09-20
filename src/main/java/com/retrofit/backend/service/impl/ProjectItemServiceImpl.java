@@ -357,11 +357,19 @@ public class ProjectItemServiceImpl implements ProjectItemService {
     }
 
     @Transactional
-    public void updateGanttDates(Long itemId, GanttUpdateDto dto) {
+    public void updateGanttDates(Long projectId, Long itemId, GanttUpdateDto dto) {
         ProjectItem item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Partida no encontrada"));
 
-        validatePredecessor(item, dto.getPredecessorId());
+        if (!item.getProject().getId().equals(projectId)) {
+            throw new ResourceNotFoundException("La partida no pertenece al proyecto especificado.");
+        }
+
+        List<ProjectItem> allProjectItems = itemRepository.findByProjectId(projectId);
+        Map<Long, ProjectItem> itemMap = allProjectItems.stream()
+                .collect(Collectors.toMap(ProjectItem::getId, p -> p));
+
+        validatePredecessor(item, dto.getPredecessorId(), itemMap);
 
         // 1. Calculamos cuántos días se está moviendo la barra hacia el futuro o pasado
         long daysShifted = 0;
@@ -380,8 +388,6 @@ public class ProjectItemServiceImpl implements ProjectItemService {
         // 3. EFECTO DOMINÓ: Si la barra se movió (daysShifted != 0), empujamos a sus
         // hijas en memoria
         if (daysShifted != 0) {
-            List<ProjectItem> allProjectItems = itemRepository.findByProjectId(item.getProject().getId());
-
             Map<Long, List<ProjectItem>> childrenGraph = new HashMap<>();
             for (ProjectItem pi : allProjectItems) {
                 if (pi.getPredecessorId() != null) {
@@ -398,7 +404,7 @@ public class ProjectItemServiceImpl implements ProjectItemService {
         auditService.logAction("UPDATE", "Gantt", itemId, null, dto);
     }
 
-    private void validatePredecessor(ProjectItem item, Long predecessorId) {
+    private void validatePredecessor(ProjectItem item, Long predecessorId, Map<Long, ProjectItem> itemMap) {
         if (predecessorId == null) {
             return;
         }
@@ -406,10 +412,9 @@ public class ProjectItemServiceImpl implements ProjectItemService {
             throw new IllegalArgumentException("Una partida no puede depender de sí misma.");
         }
 
-        ProjectItem predecessor = itemRepository.findById(predecessorId)
-                .orElseThrow(() -> new IllegalArgumentException("La partida predecesora no existe."));
-        if (!item.getProject().getId().equals(predecessor.getProject().getId())) {
-            throw new IllegalArgumentException("La partida predecesora debe pertenecer al mismo proyecto.");
+        ProjectItem predecessor = itemMap.get(predecessorId);
+        if (predecessor == null) {
+            throw new IllegalArgumentException("La partida predecesora no existe o no pertenece al mismo proyecto.");
         }
 
         Set<Long> visited = new HashSet<>();
@@ -422,7 +427,7 @@ public class ProjectItemServiceImpl implements ProjectItemService {
                 throw new IllegalArgumentException("La relación generaría un ciclo entre actividades.");
             }
             Long nextId = current.getPredecessorId();
-            current = nextId == null ? null : itemRepository.findById(nextId).orElse(null);
+            current = nextId == null ? null : itemMap.get(nextId);
         }
     }
 
@@ -464,6 +469,7 @@ public class ProjectItemServiceImpl implements ProjectItemService {
         }
     }
 
+    @Transactional
     public List<GanttItemResponseDto> getGanttItems(Long projectId) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado"));
@@ -551,6 +557,13 @@ public class ProjectItemServiceImpl implements ProjectItemService {
             itemRepository.saveAll(itemsToUpdate);
         }
 
+        // --- PRE-FETCH EN BATCH DE METRADOS EJECUTADOS (ELIMINA N+1) ---
+        List<Object[]> executedResults = reportRepository.sumExecutedQuantityByProjectIdGroupedByItemId(projectId);
+        Map<Long, Double> executedMap = new HashMap<>();
+        for (Object[] result : executedResults) {
+            executedMap.put((Long) result[0], ((Number) result[1]).doubleValue());
+        }
+
         // 2. MAPEO CON JERARQUÍA (Padres e Hijos)
         Map<Integer, Long> levelTracker = new HashMap<>(); // Para rastrear quién es el padre actual de cada nivel
 
@@ -585,7 +598,7 @@ public class ProjectItemServiceImpl implements ProjectItemService {
             }
             dto.setBaseDurationDays(isParent ? 0 : baseDays);
 
-            Double executed = reportRepository.sumExecutedQuantityByItemId(item.getId());
+            Double executed = executedMap.get(item.getId());
             double progress = 0.0;
             if (!isParent && executed != null && item.getTotalQuantity() > 0) {
                 progress = (executed / item.getTotalQuantity()) * 100;

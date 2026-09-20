@@ -27,10 +27,11 @@ public class ProjectItemController {
     @PutMapping("/{id}/gantt")
     @PreAuthorize("hasAuthority('PROJECT_UPDATE')")
     public ResponseEntity<Void> updateGanttDates(
+            @PathVariable Long projectId,
             @PathVariable Long id,
             @RequestBody GanttUpdateDto dto) {
 
-        itemService.updateGanttDates(id, dto);
+        itemService.updateGanttDates(projectId, id, dto);
         return ResponseEntity.ok().build();
     }
 
