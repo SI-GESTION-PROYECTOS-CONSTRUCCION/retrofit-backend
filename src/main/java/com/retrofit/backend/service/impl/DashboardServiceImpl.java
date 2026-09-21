@@ -68,16 +68,20 @@ public class DashboardServiceImpl implements DashboardService {
         // TABLA DE ALERTAS (Optimizado: bulk queries agrupadas en vez de bucle N+1)
         List<CriticalItemDto> criticalItems = new ArrayList<>();
         if (ac != null && ac > 0.0) {
-            List<ProjectItem> items;
-            List<ProjectItem> allProjectItems;
-            if (itemId != null) {
-                ProjectItem specificItem = projectItemRepository.findById(itemId).orElse(null);
-                items = specificItem != null ? List.of(specificItem) : Collections.emptyList();
-                allProjectItems = projectItemRepository.findByProjectId(projectId);
-            } else {
-                items = projectItemRepository.findByProjectId(projectId);
-                allProjectItems = items;
-            }
+            List<ProjectItem> allProjectItems = projectItemRepository.findByProjectId(projectId);
+            final String selectedExactCode = exactCode;
+            List<ProjectItem> items = allProjectItems.stream()
+                    .filter(item -> {
+                        String code = item.getCode() != null ? item.getCode().trim() : "";
+                        return selectedExactCode == null || code.equals(selectedExactCode) || code.startsWith(selectedExactCode + ".");
+                    })
+                    .filter(item -> {
+                        String code = item.getCode() != null ? item.getCode().trim() : "";
+                        return !code.isEmpty() && allProjectItems.stream()
+                                .map(child -> child.getCode() != null ? child.getCode().trim() : "")
+                                .noneMatch(childCode -> childCode.startsWith(code + "."));
+                    })
+                    .toList();
 
             if (!items.isEmpty()) {
                 List<Object[]> evRows = progressReportRepository.sumEarnedValueByProjectIdGroupedByItemId(projectId);
@@ -136,15 +140,13 @@ public class DashboardServiceImpl implements DashboardService {
         if (ac != null && ac > 0.0) {
             List<Object[]> costsByType = progressReportResourceRepository.calculateActualCostByResourceType(projectId, exactCode, prefixCode);
             for (Object[] row : costsByType) {
-                Class<?> resourceClass = (Class<?>) row[0]; // Retorna ej: LaborCategory.class
-                Double cost = (Double) row[1];
-
-                String className = resourceClass != null ? resourceClass.getSimpleName().toUpperCase() : "";
-                if (className.contains("LABOR")) {
+                String resourceType = String.valueOf(row[0]);
+                double cost = ((Number) row[1]).doubleValue();
+                if ("LABOR".equals(resourceType)) {
                     totalLaborCost += cost;
-                } else if (className.contains("MATERIAL")) {
+                } else if ("MATERIAL".equals(resourceType)) {
                     totalMaterialCost += cost;
-                } else if (className.contains("EQUIPMENT")) {
+                } else if ("EQUIPMENT".equals(resourceType)) {
                     totalEquipmentCost += cost;
                 }
             }
@@ -152,36 +154,49 @@ public class DashboardServiceImpl implements DashboardService {
 
         // CURVA S (Evolución acumulada en el tiempo)
         List<TimeEvolutionDto> timeEvolution = new ArrayList<>();
-        if ((ev != null && ev > 0.0) || (ac != null && ac > 0.0)) {
+        if ((ev != null && ev > 0.0) || (ac != null && ac > 0.0) || (pv != null && pv > 0.0)) {
             List<Object[]> evData = progressReportRepository.getEarnedValueByDate(projectId, exactCode, prefixCode);
             List<Object[]> acData = progressReportResourceRepository.getActualCostByDate(projectId, exactCode, prefixCode);
 
             Map<LocalDate, double[]> timelineData = new TreeMap<>();
+            List<ProjectItem> projectItems = projectItemRepository.findByProjectId(projectId);
+            for (ProjectItem item : projectItems) {
+                String code = item.getCode();
+                boolean selected = exactCode == null || (code != null && (code.equals(exactCode) || code.startsWith(exactCode + ".")));
+                boolean parent = code != null && projectItems.stream().anyMatch(child -> child.getCode() != null && child.getCode().startsWith(code + "."));
+                if (!selected || parent || item.getStartDate() == null || item.getEndDate() == null) continue;
+                LocalDate end = item.getEndDate().isAfter(item.getStartDate()) ? item.getEndDate() : item.getStartDate().plusDays(1);
+                long days = java.time.temporal.ChronoUnit.DAYS.between(item.getStartDate(), end);
+                double budget = (item.getTotalQuantity() == null ? 0 : item.getTotalQuantity()) * (item.getUnitPrice() == null ? 0 : item.getUnitPrice());
+                for (LocalDate day = item.getStartDate(); day.isBefore(end); day = day.plusDays(1)) {
+                    timelineData.computeIfAbsent(day, ignored -> new double[]{0, 0, 0})[0] += budget / days;
+                }
+            }
 
             for (Object[] row : evData) {
                 LocalDate date = (LocalDate) row[0];
                 Double value = (Double) row[1];
-                timelineData.putIfAbsent(date, new double[]{0.0, 0.0});
-                timelineData.get(date)[0] = value; // Índice 0 para EV
+                timelineData.computeIfAbsent(date, ignored -> new double[]{0, 0, 0})[1] = value;
             }
 
             for (Object[] row : acData) {
                 LocalDate date = (LocalDate) row[0];
                 Double value = (Double) row[1];
-                timelineData.putIfAbsent(date, new double[]{0.0, 0.0});
-                timelineData.get(date)[1] = value; // Índice 1 para AC
+                timelineData.computeIfAbsent(date, ignored -> new double[]{0, 0, 0})[2] = value;
             }
 
+            Double currentPvAcc = 0.0;
             Double currentEvAcc = 0.0;
             Double currentAcAcc = 0.0;
 
             for (Map.Entry<LocalDate, double[]> entry : timelineData.entrySet()) {
-                currentEvAcc += entry.getValue()[0];
-                currentAcAcc += entry.getValue()[1];
+                currentPvAcc += entry.getValue()[0];
+                currentEvAcc += entry.getValue()[1];
+                currentAcAcc += entry.getValue()[2];
 
                 timeEvolution.add(TimeEvolutionDto.builder()
                         .dateLabel(entry.getKey().toString())
-                        .plannedValueAccumulated(pv) // PV suele ser la meta (línea recta superior)
+                        .plannedValueAccumulated(currentPvAcc)
                         .earnedValueAccumulated(currentEvAcc)
                         .actualCostAccumulated(currentAcAcc)
                         .build());

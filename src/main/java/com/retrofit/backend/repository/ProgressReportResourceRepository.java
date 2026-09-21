@@ -35,13 +35,12 @@ public interface ProgressReportResourceRepository extends JpaRepository<Progress
     Double calculateActualCostByProjectItemCode(@Param("projectId") Long projectId, @Param("exactCode") String exactCode, @Param("prefixCode") String prefixCode);
 
     // Calcula el Costo Real AGRUPADO POR TIPO DE RECURSO (Para la Dona)
-    @Query("SELECT TYPE(r), COALESCE(SUM(prr.realQuantity * r.basePrice), 0.0) " +
-            "FROM ProgressReportResource prr " +
-            "JOIN prr.progressReport pr " +
-            "JOIN pr.projectItem pi " +
-            "JOIN prr.resource r " +
-            "WHERE pi.project.id = :projectId AND (:exactCode IS NULL OR pi.code = :exactCode OR pi.code LIKE :prefixCode) " +
-            "GROUP BY TYPE(r)")
+    @Query(value = "SELECT CASE WHEN e.id IS NOT NULL THEN 'EQUIPMENT' WHEN l.id IS NOT NULL THEN 'LABOR' " +
+            "WHEN m.id IS NOT NULL THEN 'MATERIAL' ELSE 'OTHER' END, COALESCE(SUM(prr.real_quantity * r.base_price), 0) " +
+            "FROM progress_report_resources prr JOIN progress_reports pr ON pr.id = prr.report_id " +
+            "JOIN project_items pi ON pi.id = pr.project_item_id JOIN resources r ON r.id = prr.resource_id " +
+            "LEFT JOIN equipments e ON e.id = r.id LEFT JOIN labor_categories l ON l.id = r.id LEFT JOIN materials m ON m.id = r.id " +
+            "WHERE pi.project_id = :projectId AND (:exactCode IS NULL OR pi.code = :exactCode OR pi.code LIKE :prefixCode) GROUP BY 1", nativeQuery = true)
     List<Object[]> calculateActualCostByResourceType(@Param("projectId") Long projectId, @Param("exactCode") String exactCode, @Param("prefixCode") String prefixCode);
 
     // Calcula el Costo Real por fecha (Para la Curva S)

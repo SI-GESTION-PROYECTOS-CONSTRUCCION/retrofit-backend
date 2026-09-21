@@ -2,11 +2,13 @@ package com.retrofit.backend.service.impl;
 
 import com.retrofit.backend.dto.AuditLogResponseDto;
 import com.retrofit.backend.dto.AuditStatsDto;
+import com.retrofit.backend.dto.NotificationEventDto;
 import com.retrofit.backend.model.AuditLog;
 import com.retrofit.backend.model.User;
 import com.retrofit.backend.repository.AuditLogRepository;
 import com.retrofit.backend.repository.UserRepository;
 import com.retrofit.backend.service.AuditService;
+import com.retrofit.backend.service.NotificationStreamService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -31,6 +33,7 @@ public class AuditServiceImpl implements AuditService {
     private final AuditLogRepository auditLogRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final NotificationStreamService notificationStreamService;
 
     // Leer
     @Override
@@ -119,9 +122,25 @@ public class AuditServiceImpl implements AuditService {
 
             // Guardar
             auditLogRepository.save(log);
+            notificationStreamService.publish(NotificationEventDto.builder()
+                    .id("LOG-" + log.getId())
+                    .title(notificationTitle(action))
+                    .message(currentUser != null ? currentUser.getName() + ": " + module : module)
+                    .timestamp(log.getActionDate())
+                    .build());
 
         } catch (Exception e) {
             System.err.println("Error guardando auditoría: " + e.getMessage());
         }
+    }
+
+    private String notificationTitle(String action) {
+        return switch (action) {
+            case "CREATE" -> "Nuevo registro";
+            case "UPDATE" -> "Información actualizada";
+            case "DELETE" -> "Registro eliminado";
+            case "EXPORT" -> "Reporte generado";
+            default -> "Actividad registrada";
+        };
     }
 }
