@@ -25,6 +25,7 @@ public class ProjectItemServiceImpl implements ProjectItemService {
     private final ProgressReportRepository reportRepository;
     private final ResourceRepository resourceRepository;
     private final ProjectItemResourceRepository apuRepository;
+    private final ProjectItemDependencyRepository dependencyRepository;
     private final AuditService auditService;
 
     @Override
@@ -369,36 +370,67 @@ public class ProjectItemServiceImpl implements ProjectItemService {
         Map<Long, ProjectItem> itemMap = allProjectItems.stream()
                 .collect(Collectors.toMap(ProjectItem::getId, p -> p));
 
-        validatePredecessor(item, dto.getPredecessorId(), itemMap);
-
-        // 1. Calculamos cuántos días se está moviendo la barra hacia el futuro o pasado
-        long daysShifted = 0;
-        if (item.getStartDate() != null && dto.getStartDate() != null) {
-            daysShifted = ChronoUnit.DAYS.between(item.getStartDate(), dto.getStartDate());
+        List<GanttDependencyDto> requestedDependencies = dto.getDependencies();
+        if (requestedDependencies == null) {
+            requestedDependencies = dto.getPredecessorId() == null ? List.of() : List.of(legacyDependency(dto.getPredecessorId()));
         }
+        validateDependencies(item, requestedDependencies, itemMap);
+
+        Map<Long, List<GanttDependencyDto>> relations = new HashMap<>();
+        for (ProjectItemDependency relation : dependencyRepository.findBySuccessorProjectId(projectId)) {
+            GanttDependencyDto link = new GanttDependencyDto();
+            link.setPredecessorId(relation.getPredecessor().getId());
+            link.setType(relation.getType());
+            relations.computeIfAbsent(relation.getSuccessor().getId(), ignored -> new ArrayList<>()).add(link);
+        }
+        for (ProjectItem existing : allProjectItems) {
+            if (!relations.containsKey(existing.getId()) && existing.getPredecessorId() != null) {
+                relations.put(existing.getId(), List.of(legacyDependency(existing.getPredecessorId())));
+            }
+        }
+        relations.put(itemId, requestedDependencies);
+        validateDependencyGraph(relations);
 
         // 2. Actualizamos la partida actual con las fechas que mandó Angular
         item.setStartDate(dto.getStartDate());
         item.setEndDate(dto.getEndDate());
-        item.setPredecessorId(dto.getPredecessorId());
+        // Se conserva la columna anterior para que los cronogramas existentes sigan funcionando.
+        item.setPredecessorId(requestedDependencies.isEmpty() ? null : requestedDependencies.get(0).getPredecessorId());
 
-        List<ProjectItem> modifiedItems = new ArrayList<>();
-        modifiedItems.add(item);
-
-        // 3. EFECTO DOMINÓ: Si la barra se movió (daysShifted != 0), empujamos a sus
-        // hijas en memoria
-        if (daysShifted != 0) {
-            Map<Long, List<ProjectItem>> childrenGraph = new HashMap<>();
-            for (ProjectItem pi : allProjectItems) {
-                if (pi.getPredecessorId() != null) {
-                    childrenGraph.computeIfAbsent(pi.getPredecessorId(), k -> new ArrayList<>()).add(pi);
+        dependencyRepository.deleteBySuccessorId(itemId);
+        List<ProjectItemDependency> dependencies = requestedDependencies.stream().map(dependency -> {
+            ProjectItemDependency relation = new ProjectItemDependency();
+            relation.setSuccessor(item);
+            relation.setPredecessor(itemMap.get(dependency.getPredecessorId()));
+            relation.setType(dependency.getType() == null ? DependencyType.FINISH_TO_START : dependency.getType());
+            return relation;
+        }).collect(Collectors.toList());
+        dependencyRepository.saveAll(dependencies);
+        alignItemWithDependencies(item, requestedDependencies, itemMap);
+        Set<Long> affected = new HashSet<>(Set.of(itemId));
+        boolean discovered;
+        do {
+            discovered = false;
+            for (ProjectItem successor : allProjectItems) {
+                if (affected.contains(successor.getId())) continue;
+                if (relations.getOrDefault(successor.getId(), List.of()).stream()
+                        .anyMatch(link -> affected.contains(link.getPredecessorId()))) {
+                    affected.add(successor.getId());
+                    discovered = true;
                 }
             }
-
-            cascadeDateShiftInMemory(item.getId(), daysShifted, childrenGraph, modifiedItems);
+        } while (discovered);
+        for (int pass = 0; pass < affected.size(); pass++) {
+            boolean moved = false;
+            for (ProjectItem successor : allProjectItems) {
+                if (successor.getId().equals(itemId) || !affected.contains(successor.getId())) continue;
+                LocalDate before = successor.getStartDate();
+                alignItemWithDependencies(successor, relations.getOrDefault(successor.getId(), List.of()), itemMap);
+                if (!Objects.equals(before, successor.getStartDate())) moved = true;
+            }
+            if (!moved) break;
         }
-
-        itemRepository.saveAll(modifiedItems);
+        itemRepository.saveAll(affected.stream().map(itemMap::get).toList());
 
         // Registrar en el log de auditoría los cambios en el cronograma
         auditService.logAction("UPDATE", "Gantt", itemId, null, dto);
@@ -417,18 +449,69 @@ public class ProjectItemServiceImpl implements ProjectItemService {
             throw new IllegalArgumentException("La partida predecesora no existe o no pertenece al mismo proyecto.");
         }
 
-        Set<Long> visited = new HashSet<>();
-        ProjectItem current = predecessor;
-        while (current != null) {
-            if (!visited.add(current.getId())) {
-                throw new IllegalArgumentException("La relación de dependencia contiene un ciclo.");
+    }
+
+    private GanttDependencyDto legacyDependency(Long predecessorId) {
+        GanttDependencyDto dependency = new GanttDependencyDto();
+        dependency.setPredecessorId(predecessorId);
+        dependency.setType(DependencyType.FINISH_TO_START);
+        return dependency;
+    }
+
+    private void validateDependencies(ProjectItem item, List<GanttDependencyDto> dependencies, Map<Long, ProjectItem> itemMap) {
+        Set<Long> uniquePredecessors = new HashSet<>();
+        for (GanttDependencyDto dependency : dependencies) {
+            if (dependency == null || dependency.getPredecessorId() == null || !uniquePredecessors.add(dependency.getPredecessorId())) {
+                throw new IllegalArgumentException("Cada relación debe tener una predecesora distinta.");
             }
-            if (current.getId().equals(item.getId())) {
-                throw new IllegalArgumentException("La relación generaría un ciclo entre actividades.");
-            }
-            Long nextId = current.getPredecessorId();
-            current = nextId == null ? null : itemMap.get(nextId);
+            validatePredecessor(item, dependency.getPredecessorId(), itemMap);
         }
+    }
+
+    private void validateDependencyGraph(Map<Long, List<GanttDependencyDto>> relations) {
+        Set<Long> visited = new HashSet<>();
+        Set<Long> active = new HashSet<>();
+        for (Long successor : relations.keySet()) {
+            visitDependency(successor, relations, visited, active);
+        }
+    }
+
+    private void visitDependency(Long id, Map<Long, List<GanttDependencyDto>> relations,
+            Set<Long> visited, Set<Long> active) {
+        if (visited.contains(id)) return;
+        if (!active.add(id)) throw new IllegalArgumentException("La relación generaría un ciclo entre actividades.");
+        for (GanttDependencyDto link : relations.getOrDefault(id, List.of())) {
+            visitDependency(link.getPredecessorId(), relations, visited, active);
+        }
+        active.remove(id);
+        visited.add(id);
+    }
+
+    /** Ajusta la actividad sucesora al hito que exige cada una de sus relaciones. */
+    private void alignItemWithDependencies(ProjectItem item, List<GanttDependencyDto> dependencies, Map<Long, ProjectItem> itemMap) {
+        if (item.getStartDate() == null || item.getEndDate() == null) return;
+        LocalDate requiredStart = null;
+        LocalDate requiredEnd = null;
+        for (GanttDependencyDto dependency : dependencies) {
+            ProjectItem predecessor = itemMap.get(dependency.getPredecessorId());
+            if (predecessor == null || predecessor.getStartDate() == null || predecessor.getEndDate() == null) continue;
+            DependencyType type = dependency.getType() == null ? DependencyType.FINISH_TO_START : dependency.getType();
+            if (type == DependencyType.FINISH_TO_START) requiredStart = latest(requiredStart, predecessor.getEndDate());
+            if (type == DependencyType.START_TO_START) requiredStart = latest(requiredStart, predecessor.getStartDate());
+            if (type == DependencyType.FINISH_TO_FINISH) requiredEnd = latest(requiredEnd, predecessor.getEndDate());
+            if (type == DependencyType.START_TO_FINISH) requiredEnd = latest(requiredEnd, predecessor.getStartDate());
+        }
+        LocalDate targetStart = requiredStart != null && item.getStartDate().isBefore(requiredStart) ? requiredStart : item.getStartDate();
+        LocalDate targetEnd = requiredEnd != null && item.getEndDate().isBefore(requiredEnd) ? requiredEnd : item.getEndDate();
+        long shift = Math.max(ChronoUnit.DAYS.between(item.getStartDate(), targetStart), ChronoUnit.DAYS.between(item.getEndDate(), targetEnd));
+        if (shift > 0) {
+            item.setStartDate(item.getStartDate().plusDays(shift));
+            item.setEndDate(item.getEndDate().plusDays(shift));
+        }
+    }
+
+    private LocalDate latest(LocalDate current, LocalDate candidate) {
+        return current == null || candidate.isAfter(current) ? candidate : current;
     }
 
     private void cascadeDateShiftInMemory(Long parentId, long daysShifted, Map<Long, List<ProjectItem>> childrenGraph,
@@ -475,6 +558,13 @@ public class ProjectItemServiceImpl implements ProjectItemService {
                 .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado"));
 
         List<ProjectItem> items = itemRepository.findByProjectId(projectId);
+        Map<Long, List<GanttDependencyDto>> dependenciesBySuccessor = dependencyRepository.findBySuccessorProjectId(projectId).stream()
+                .collect(Collectors.groupingBy(relation -> relation.getSuccessor().getId(), Collectors.mapping(relation -> {
+                    GanttDependencyDto dependency = new GanttDependencyDto();
+                    dependency.setPredecessorId(relation.getPredecessor().getId());
+                    dependency.setType(relation.getType());
+                    return dependency;
+                }, Collectors.toList())));
         // Respetamos el orden exacto del presupuesto
         items.sort(Comparator.comparing(ProjectItem::getItemOrder, Comparator.nullsLast(Comparator.naturalOrder()))
                 .thenComparing(ProjectItem::getId));
@@ -584,6 +674,9 @@ public class ProjectItemServiceImpl implements ProjectItemService {
             dto.setStartDate(item.getStartDate());
             dto.setEndDate(item.getEndDate());
             dto.setPredecessorId(item.getPredecessorId());
+            List<GanttDependencyDto> dependencies = dependenciesBySuccessor.getOrDefault(item.getId(), new ArrayList<>());
+            if (dependencies.isEmpty() && item.getPredecessorId() != null) dependencies = List.of(legacyDependency(item.getPredecessorId()));
+            dto.setDependencies(dependencies);
             dto.setCode(item.getCode());
             // --- INYECCIÓN DE JERARQUÍA ---
             dto.setParentId(myParentId);
