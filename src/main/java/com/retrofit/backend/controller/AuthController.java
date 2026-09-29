@@ -13,6 +13,10 @@ import com.retrofit.backend.service.RefreshTokenService;
 import com.retrofit.backend.auth.jwt.JwtUtil;
 import com.retrofit.backend.auth.TokenRefreshRequest;
 import com.retrofit.backend.model.RefreshToken;
+import com.retrofit.backend.dto.ForgotPasswordRequestDto;
+import com.retrofit.backend.dto.ResetPasswordRequestDto;
+import com.retrofit.backend.service.PasswordResetService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,6 +39,7 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
     private final RefreshTokenService refreshTokenService;
+    private final PasswordResetService passwordResetService;
 
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('SECURITY_CREATE')")
     @PostMapping("/registerAdmin")
@@ -97,5 +102,17 @@ public class AuthController {
         userService.changePassword(userDetails.getUsername(), newPassword);
         
         return ResponseEntity.ok(Map.of("message", "Contraseña cambiada exitosamente"));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequestDto request) {
+        passwordResetService.processForgotPassword(request);
+        return ResponseEntity.ok(Map.of("message", "Si el correo electrónico está registrado, recibirás un enlace de recuperación."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequestDto request) {
+        passwordResetService.resetPassword(request);
+        return ResponseEntity.ok(Map.of("message", "Contraseña restablecida exitosamente. Ahora puedes iniciar sesión con tu nueva contraseña."));
     }
 }
