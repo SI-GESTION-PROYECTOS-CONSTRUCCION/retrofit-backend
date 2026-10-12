@@ -1,29 +1,31 @@
 package com.retrofit.backend.service.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.retrofit.backend.service.EmailService;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
-import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class EmailServiceImpl implements EmailService {
-
-    private final JavaMailSender mailSender;
 
     @Value("${app.mail.from:}")
     private String configuredMailFrom;
 
-    @Value("${spring.mail.username:}")
-    private String smtpUsername;
+    @Value("${brevo.api.key:}")
+    private String brevoApiKey;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public void sendPasswordResetEmail(String toEmail, String recipientName, String resetUrl) {
@@ -36,33 +38,54 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     public void sendHtmlEmail(String toEmail, String subject, String htmlContent) {
+        if (brevoApiKey == null || brevoApiKey.isBlank()) {
+            log.warn("BREVO_API_KEY no está configurada. No se pudo enviar el correo a {}", toEmail);
+            throw new RuntimeException("El servicio de correo no está configurado (falta BREVO_API_KEY).");
+        }
+
+        String fromAddress = (configuredMailFrom != null && !configuredMailFrom.isBlank())
+                ? configuredMailFrom.trim()
+                : "";
+
+        if (fromAddress.isBlank()) {
+            log.warn("APP_MAIL_FROM no está configurada en las variables de entorno.");
+            throw new RuntimeException("El correo remitente no está configurado (falta APP_MAIL_FROM).");
+        }
+
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            Map<String, Object> payload = Map.of(
+                    "sender", Map.of("name", "Retrofit", "email", fromAddress),
+                    "to", List.of(Map.of("email", toEmail)),
+                    "subject", subject,
+                    "htmlContent", htmlContent
+            );
 
-            String fromAddress = (configuredMailFrom != null && !configuredMailFrom.isBlank())
-                    ? configuredMailFrom
-                    : smtpUsername;
+            String jsonBody = objectMapper.writeValueAsString(payload);
 
-            if (fromAddress == null || fromAddress.isBlank()) {
-                fromAddress = "noreply@retrofit.com";
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(10))
+                    .build();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.brevo.com/v3/smtp/email"))
+                    .header("api-key", brevoApiKey.trim())
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody, StandardCharsets.UTF_8))
+                    .timeout(Duration.ofSeconds(10))
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                log.info("Correo enviado exitosamente vía Brevo API a: {}", toEmail);
+            } else {
+                log.error("Fallo al enviar correo con Brevo API. HTTP {}: {}", response.statusCode(), response.body());
+                throw new RuntimeException("Error en Brevo API (" + response.statusCode() + "): " + response.body());
             }
-
-            try {
-                helper.setFrom(fromAddress, "Retrofit Seguridad");
-            } catch (UnsupportedEncodingException e) {
-                helper.setFrom(fromAddress);
-            }
-
-            helper.setTo(toEmail);
-            helper.setSubject(subject);
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
-            log.info("Correo de restablecimiento enviado exitosamente a: {}", toEmail);
-        } catch (MessagingException e) {
-            log.error("Error al enviar correo electrónico a {}: {}", toEmail, e.getMessage());
-            throw new RuntimeException("No se pudo enviar el correo de recuperación. Inténtelo más tarde.");
+        } catch (Exception e) {
+            log.error("Error al enviar correo vía Brevo API a {}: {}", toEmail, e.getMessage());
+            throw new RuntimeException("Error en servicio de correo: " + e.getMessage(), e);
         }
     }
 
