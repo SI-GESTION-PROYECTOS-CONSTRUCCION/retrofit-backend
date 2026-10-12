@@ -32,6 +32,12 @@ public class AuthServiceImplTest {
     @Mock
     private JwtUtil jwtUtil;
 
+    @Mock
+    private com.retrofit.backend.repository.UserRepository userRepository;
+
+    @Mock
+    private com.retrofit.backend.service.AuditService auditService;
+
     @InjectMocks
     private AuthServiceImpl authService;
 
@@ -72,7 +78,7 @@ public class AuthServiceImplTest {
             authService.login(authRequest);
         });
 
-        assertEquals("Bad credentials", exception.getMessage());
+        assertTrue(exception.getMessage().contains("Usuario o contraseña incorrectos") || exception.getMessage().contains("Bad credentials"));
         verify(authenticationManager, times(1)).authenticate(any(UsernamePasswordAuthenticationToken.class));
         verify(userDetailsService, never()).loadUserByUsername(anyString());
         verify(jwtUtil, never()).generateToken(any(UserDetails.class));

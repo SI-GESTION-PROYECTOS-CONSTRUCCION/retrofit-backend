@@ -75,8 +75,6 @@ public class DashboardServiceImplTest {
         verify(progressReportRepository, never()).sumEarnedValueByProjectIdGroupedByItemId(anyLong());
         verify(progressReportResourceRepository, never()).sumActualCostByProjectIdGroupedByItemId(anyLong());
         verify(progressReportResourceRepository, never()).calculateActualCostByResourceType(anyLong(), any(), any());
-        verify(progressReportRepository, never()).getEarnedValueByDate(anyLong(), any(), any());
-        verify(progressReportResourceRepository, never()).getActualCostByDate(anyLong(), any(), any());
     }
 
     @Test

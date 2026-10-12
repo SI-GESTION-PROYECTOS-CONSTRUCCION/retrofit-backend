@@ -6,15 +6,19 @@ import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Field;
 
 @Aspect
 @Component
-@RequiredArgsConstructor
 public class AuditAspect {
     private final AuditService auditService;
+
+    public AuditAspect(@Lazy AuditService auditService) {
+        this.auditService = auditService;
+    }
 
     @AfterReturning(pointcut = "@annotation(auditarCambio)", returning = "resultado")
     public void registrarAuditoria(JoinPoint joinPoint, AuditChange auditarCambio, Object resultado) {

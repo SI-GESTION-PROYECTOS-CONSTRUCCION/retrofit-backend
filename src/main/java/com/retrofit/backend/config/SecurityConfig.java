@@ -30,6 +30,7 @@ public class SecurityConfig {
     @Value("${cors.allowed-origins}")
     private String allowedOrigins;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitingFilter rateLimitingFilter;
 
     @Bean
     public org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer webSecurityCustomizer() {
@@ -53,6 +54,12 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(withDefaults())
+                .headers(headers -> headers
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .includeSubDomains(true)
+                                .maxAgeInSeconds(31536000)
+                                .preload(true))
+                        .frameOptions(frame -> frame.sameOrigin()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
@@ -69,6 +76,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(customAccessDeniedHandler)
                         .authenticationEntryPoint(customAuthenticationEntryPoint));
 
+        http.addFilterBefore(rateLimitingFilter, org.springframework.security.web.authentication.logout.LogoutFilter.class);
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

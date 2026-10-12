@@ -203,8 +203,13 @@ public class UserServiceImpl implements UserService {
 
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setRequirePasswordChange(false);
+        user.setPrivacyPolicyAccepted(true);
+        user.setPrivacyPolicyAcceptedAt(Timestamp.valueOf(LocalDateTime.now()));
         user.setUpdatedAt(Timestamp.valueOf(LocalDateTime.now()));
         userRepository.save(user);
+
+        auditService.logAction("ACCEPT_TERMS", "Políticas de Privacidad", user.getId(), null,
+                "Aceptación formal y expresa de las Políticas de Privacidad y Tratamiento de Datos Personales (ISO 27001)");
     }
 
     private UserDTO mapToDTO(User user) {

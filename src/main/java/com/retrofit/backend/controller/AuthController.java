@@ -27,6 +27,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import com.retrofit.backend.dto.ChangePasswordRequestDto;
+import com.retrofit.backend.service.AuditService;
 import java.util.Map;
 
 @RestController
@@ -40,6 +42,7 @@ public class AuthController {
     private final UserDetailsService userDetailsService;
     private final RefreshTokenService refreshTokenService;
     private final PasswordResetService passwordResetService;
+    private final AuditService auditService;
 
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('SECURITY_CREATE')")
     @PostMapping("/registerAdmin")
@@ -65,6 +68,7 @@ public class AuthController {
                 .role(user.getRole().getName())
                 .permissions(permisos)
                 .requirePasswordChange(user.isRequirePasswordChange())
+                .privacyPolicyAccepted(user.isPrivacyPolicyAccepted())
                 .build();
 
         return ResponseEntity.ok(dto);
@@ -93,14 +97,11 @@ public class AuthController {
     }
 
     @PostMapping("/change-password")
-    public ResponseEntity<?> changePassword(@AuthenticationPrincipal UserDetails userDetails, @RequestBody Map<String, String> request) {
-        String newPassword = request.get("newPassword");
-        if (newPassword == null || newPassword.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "La nueva contraseña es requerida"));
-        }
-        
-        userService.changePassword(userDetails.getUsername(), newPassword);
-        
+    public ResponseEntity<?> changePassword(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody ChangePasswordRequestDto request) {
+        userService.changePassword(userDetails.getUsername(), request.getNewPassword());
+        auditService.logAuthenticationEvent("UPDATE", userDetails.getUsername(), true, "Cambio de contraseña realizado exitosamente con validación de complejidad");
         return ResponseEntity.ok(Map.of("message", "Contraseña cambiada exitosamente"));
     }
 

@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "audit_log")
+@org.hibernate.annotations.Immutable
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

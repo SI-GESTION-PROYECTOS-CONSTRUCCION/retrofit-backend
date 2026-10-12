@@ -47,6 +47,20 @@ public class User {
     @Builder.Default
     private boolean requirePasswordChange = true;
 
+    @Column(name = "failed_attempts", columnDefinition = "int default 0")
+    @Builder.Default
+    private int failedAttempts = 0;
+
+    @Column(name = "lock_time")
+    private Timestamp lockTime;
+
+    @Column(name = "privacy_policy_accepted", columnDefinition = "boolean default false")
+    @Builder.Default
+    private boolean privacyPolicyAccepted = false;
+
+    @Column(name = "privacy_policy_accepted_at")
+    private Timestamp privacyPolicyAcceptedAt;
+
     @Column(unique = false)
     private Timestamp createdAt;
 

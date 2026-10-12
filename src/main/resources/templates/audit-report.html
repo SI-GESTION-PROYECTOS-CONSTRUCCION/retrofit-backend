@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>Reporte Oficial de Bitácoras y Auditoría</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 10px;
+            color: #1e293b;
+            margin: 0;
+            padding: 0;
+        }
+
+        .report-title {
+            font-size: 18px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 0 0 4px 0;
+            color: #0f172a;
+        }
+
+        .report-subtitle {
+            font-size: 10px;
+            color: #475569;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .iso-badge {
+            display: inline-block;
+            background-color: #0f766e;
+            color: #ffffff;
+            font-size: 9px;
+            font-weight: bold;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+
+        .table-meta {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+        }
+
+        .table-meta td {
+            border: 1px solid #cbd5e1;
+            padding: 5px 8px;
+            font-size: 10px;
+        }
+
+        .meta-label {
+            font-weight: bold;
+            width: 25%;
+            background-color: #f1f5f9;
+            color: #334155;
+            text-transform: uppercase;
+        }
+
+        .section-title {
+            background-color: #0f172a;
+            color: #ffffff;
+            font-weight: bold;
+            padding: 6px 10px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0;
+        }
+
+        .table-data {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+        }
+
+        .table-data th, .table-data td {
+            border: 1px solid #cbd5e1;
+            padding: 5px 6px;
+            font-size: 9px;
+            vertical-align: top;
+        }
+
+        .table-data th {
+            background-color: #f8fafc;
+            color: #1e293b;
+            text-align: left;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            font-size: 8px;
+            font-weight: bold;
+            border-radius: 3px;
+            text-align: center;
+        }
+
+        .badge-create { background-color: #dcfce7; color: #15803d; }
+        .badge-update { background-color: #dbeafe; color: #1d4ed8; }
+        .badge-delete { background-color: #fee2e2; color: #b91c1c; }
+        .badge-login { background-color: #fef3c7; color: #b45309; }
+        .badge-export { background-color: #ede9fe; color: #6d28d9; }
+
+        .text-center { text-align: center; }
+        .text-muted { color: #64748b; font-size: 8px; }
+
+        .footer-notice {
+            margin-top: 20px;
+            border-top: 1px solid #94a3b8;
+            padding-top: 8px;
+            font-size: 8px;
+            color: #64748b;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <table style="width: 100%; margin-bottom: 15px;">
+        <tr>
+            <td style="width: 25%; vertical-align: middle;">
+                <img th:if="${logoBase64 != ''}" th:src="${logoBase64}" style="width: 130px; height: auto;" />
+            </td>
+            <td style="width: 75%; text-align: left; vertical-align: middle;">
+                <h1 class="report-title">REPORTE OFICIAL DE AUDITORÍA Y TRAZABILIDAD</h1>
+                <p class="report-subtitle">SISTEMA INTEGRADO DE GESTIÓN DE PROYECTOS - RETROFIT</p>
+                <span class="iso-badge">CONFORME A CONTROLES ISO/IEC 27001 - BITÁCORAS INMUTABLES</span>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Metadatos de la Consulta -->
+    <table class="table-meta">
+        <tr>
+            <td class="meta-label">RANGO DE FECHAS</td>
+            <td><span th:text="${startDateStr}"></span> al <span th:text="${endDateStr}"></span></td>
+            <td class="meta-label">TOTAL EVENTOS</td>
+            <td><strong th:text="${totalEvents}"></strong> registros</td>
+        </tr>
+        <tr>
+            <td class="meta-label">MÓDULO FILTRADO</td>
+            <td th:text="${module}"></td>
+            <td class="meta-label">ACCIÓN FILTRADA</td>
+            <td th:text="${action}"></td>
+        </tr>
+        <tr>
+            <td class="meta-label">BÚSQUEDA / IP</td>
+            <td th:text="${search}"></td>
+            <td class="meta-label">GENERADO POR</td>
+            <td><strong th:text="${requestedBy}"></strong> (<span th:text="${generationDate}"></span>)</td>
+        </tr>
+    </table>
+
+    <!-- Tabla de Registros -->
+    <div class="section-title">REGISTRO CRONOLÓGICO DE ACCIONES Y METADATOS DE SEGURIDAD</div>
+    <table class="table-data">
+        <thead>
+            <tr>
+                <th style="width: 6%;">ID</th>
+                <th style="width: 13%;">FECHA Y HORA</th>
+                <th style="width: 17%;">USUARIO / ROL</th>
+                <th style="width: 9%; text-align: center;">ACCIÓN</th>
+                <th style="width: 13%;">MÓDULO</th>
+                <th style="width: 20%;">DISPOSITIVO / IP</th>
+                <th style="width: 22%;">DETALLE OPERACIONAL</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:if="${#lists.isEmpty(logs)}">
+                <td colspan="7" class="text-center" style="padding: 20px; color: #64748b;">
+                    No se encontraron eventos de auditoría para los criterios de filtro especificados.
+                </td>
+            </tr>
+            <tr th:each="log : ${logs}">
+                <td><strong th:text="'LOG-' + ${log.id}"></strong></td>
+                <td th:text="${#temporals.format(log.actionDate, 'dd/MM/yyyy HH:mm:ss')}"></td>
+                <td>
+                    <strong th:text="${log.user != null ? log.user.name : 'Sistema / Anónimo'}"></strong>
+                    <div class="text-muted" th:text="${log.user != null ? log.user.role.name : 'Sin rol'}"></div>
+                </td>
+                <td class="text-center">
+                    <span th:if="${log.action == 'CREATE'}" class="badge badge-create">CREAR</span>
+                    <span th:if="${log.action == 'UPDATE'}" class="badge badge-update">ACTUALIZAR</span>
+                    <span th:if="${log.action == 'DELETE'}" class="badge badge-delete">ELIMINAR</span>
+                    <span th:if="${log.action == 'LOGIN'}" class="badge badge-login">ACCESO</span>
+                    <span th:if="${log.action == 'LOGIN_FAILED'}" class="badge badge-delete">FALLO AUTH</span>
+                    <span th:if="${log.action == 'EXPORT'}" class="badge badge-export">EXPORTAR</span>
+                    <span th:if="${log.action != 'CREATE' and log.action != 'UPDATE' and log.action != 'DELETE' and log.action != 'LOGIN' and log.action != 'LOGIN_FAILED' and log.action != 'EXPORT'}"
+                          class="badge badge-update" th:text="${log.action}"></span>
+                </td>
+                <td th:text="${log.affectedTable}"></td>
+                <td>
+                    <strong>IP: </strong><span th:text="${log.ipAddress}"></span>
+                    <div class="text-muted" th:text="${log.userAgent != null ? log.userAgent : 'N/A'}"></div>
+                </td>
+                <td>
+                    <div th:if="${log.registerId != null}"><strong>Registro ID: </strong><span th:text="${log.registerId}"></span></div>
+                    <div class="text-muted" th:if="${log.newData != null and log.newData != 'null'}" th:text="${log.newData}"></div>
+                    <div class="text-muted" th:if="${log.oldData != null and log.oldData != 'null'}">Previo: <span th:text="${log.oldData}"></span></div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Aviso de Inmutabilidad y Legal -->
+    <div class="footer-notice">
+        <strong>DECLARACIÓN DE INMUTABILIDAD Y VALIDEZ PROBATORIA:</strong><br />
+        Este documento es un reporte fiel y exacto de las bitácoras de auditoría almacenadas en el subsistema de seguridad de Retrofit.
+        De acuerdo con la norma <strong>ISO/IEC 27001</strong> y la arquitectura de base de datos inmutable, cada transacción ha sido registrada de forma permanente con marca de tiempo, dirección IP, credencial de usuario y agente de software. Queda prohibida la adulteración o alteración de la información contenida en este reporte.
+    </div>
+
+</body>
+</html>

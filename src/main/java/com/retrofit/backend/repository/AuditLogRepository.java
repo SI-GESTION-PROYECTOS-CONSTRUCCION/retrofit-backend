@@ -21,7 +21,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
         @EntityGraph(attributePaths = {"user", "user.role"})
         @Query("SELECT a FROM AuditLog a WHERE " +
-                        "(:search IS NULL OR :search = '' OR LOWER(a.user.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(a.user.username) LIKE LOWER(CONCAT('%', :search, '%'))) AND "
+                        "(:search IS NULL OR :search = '' OR LOWER(a.user.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(a.user.username) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(a.ipAddress) LIKE LOWER(CONCAT('%', :search, '%'))) AND "
                         +
                         "(:module IS NULL OR :module = '' OR a.affectedTable = :module) AND " +
                         "(:action IS NULL OR :action = '' OR a.action = :action) AND " +
@@ -34,6 +34,22 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
                         @Param("startDate") LocalDateTime startDate,
                         @Param("endDate") LocalDateTime endDate,
                         Pageable pageable);
+
+        @EntityGraph(attributePaths = {"user", "user.role"})
+        @Query("SELECT a FROM AuditLog a WHERE " +
+                        "(:search IS NULL OR :search = '' OR LOWER(a.user.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(a.user.username) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(a.ipAddress) LIKE LOWER(CONCAT('%', :search, '%'))) AND "
+                        +
+                        "(:module IS NULL OR :module = '' OR a.affectedTable = :module) AND " +
+                        "(:action IS NULL OR :action = '' OR a.action = :action) AND " +
+                        "(cast(:startDate as timestamp) IS NULL OR a.actionDate >= :startDate) AND " +
+                        "(cast(:endDate as timestamp) IS NULL OR a.actionDate <= :endDate) " +
+                        "ORDER BY a.actionDate DESC")
+        List<AuditLog> findListWithFilters(
+                        @Param("search") String search,
+                        @Param("module") String module,
+                        @Param("action") String action,
+                        @Param("startDate") LocalDateTime startDate,
+                        @Param("endDate") LocalDateTime endDate);
 
         @Query("SELECT COUNT(a) FROM AuditLog a WHERE a.action IN :acciones OR a.affectedTable = :modulo")
         long countAlerts(@Param("acciones") List<String> acciones, @Param("modulo") String modulo);

@@ -16,11 +16,13 @@ import java.io.ByteArrayOutputStream;
 import com.retrofit.backend.dto.GroupedProgressReportDto;
 import com.retrofit.backend.dto.ProgressReportResponseDto;
 import com.retrofit.backend.dto.StockSummaryDTO;
+import com.retrofit.backend.model.AuditLog;
 import com.retrofit.backend.model.InventoryTransaction;
 import com.retrofit.backend.repository.InventoryTransactionRepository;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -52,7 +54,7 @@ public class PdfReportService {
         context.setVariable("currentDate", LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
 
         // 3. Renderizar HTML
-        String html = templateEngine.process("reporte-apu", context);
+        String html = templateEngine.process("apu-report", context);
 
         // 4. Limpiar a XHTML con JSoup (Flying Saucer requiere XML válido)
         Document document = Jsoup.parse(html, "UTF-8");
@@ -97,7 +99,7 @@ public class PdfReportService {
         context.setVariable("endDateStr", endDate != null ? endDate.format(formatter) : "[DD/MM/AAAA]");
         context.setVariable("currentDate", LocalDate.now().format(formatter));
 
-        String html = templateEngine.process("reporte-avances", context);
+        String html = templateEngine.process("progress-report", context);
 
         Document document = Jsoup.parse(html, "UTF-8");
         document.outputSettings().syntax(Document.OutputSettings.Syntax.xml);
@@ -126,7 +128,46 @@ public class PdfReportService {
         context.setVariable("transactions", transactions);
         context.setVariable("currentDate", LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
 
-        String html = templateEngine.process("reporte-inventario", context);
+        String html = templateEngine.process("inventory-report", context);
+
+        Document document = Jsoup.parse(html, "UTF-8");
+        document.outputSettings().syntax(Document.OutputSettings.Syntax.xml);
+        String xhtml = document.html();
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        ITextRenderer renderer = new ITextRenderer();
+        renderer.setDocumentFromString(xhtml);
+        renderer.layout();
+        renderer.createPDF(outputStream);
+
+        return outputStream.toByteArray();
+    }
+
+    public byte[] generateAuditReport(
+            List<AuditLog> logs,
+            String search,
+            String module,
+            String action,
+            LocalDate startDate,
+            LocalDate endDate,
+            String requestedBy) throws Exception {
+
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+        DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+        Context context = new Context();
+        context.setVariable("logoBase64", getLogoBase64());
+        context.setVariable("logs", logs);
+        context.setVariable("search", search != null && !search.isBlank() ? search : "Todos los registros");
+        context.setVariable("module", module != null && !module.isBlank() ? module : "Todos los módulos");
+        context.setVariable("action", action != null && !action.isBlank() ? action : "Todas las acciones");
+        context.setVariable("startDateStr", startDate != null ? startDate.format(df) : "Inicio histórico");
+        context.setVariable("endDateStr", endDate != null ? endDate.format(df) : "Actualidad");
+        context.setVariable("generationDate", LocalDateTime.now().format(dtf));
+        context.setVariable("requestedBy", requestedBy != null ? requestedBy : "Administrador del Sistema");
+        context.setVariable("totalEvents", logs != null ? logs.size() : 0);
+
+        String html = templateEngine.process("audit-report", context);
 
         Document document = Jsoup.parse(html, "UTF-8");
         document.outputSettings().syntax(Document.OutputSettings.Syntax.xml);

@@ -1,7 +1,10 @@
 package com.retrofit.backend.exceptions;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.LockedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -12,6 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @ControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(DuplicateResourceException.class)
@@ -38,13 +42,25 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler({ org.springframework.security.core.AuthenticationException.class })
+    @ExceptionHandler(LockedException.class)
+    public ResponseEntity<Map<String, String>> handleLockedException(LockedException ex) {
+        log.warn("Intento de acceso a cuenta bloqueada: {}", ex.getMessage());
+        Map<String, String> body = new HashMap<>();
+        body.put("status", "423");
+        body.put("error", "Locked");
+        body.put("message", ex.getMessage());
+        return new ResponseEntity<>(body, HttpStatus.LOCKED);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<Map<String, String>> handleAuthenticationException(
-            org.springframework.security.core.AuthenticationException ex, WebRequest request) {
+            AuthenticationException ex, WebRequest request) {
+        log.warn("Fallo de autenticación bloqueado: {}", ex.getMessage());
         Map<String, String> body = new HashMap<>();
         body.put("status", "401");
         body.put("error", "Unauthorized");
-        body.put("message", "Usuario o contraseña incorrectos");
+        body.put("message", ex.getMessage() != null && !ex.getMessage().isBlank() ? ex.getMessage()
+                : "Usuario o contraseña incorrectos");
         return new ResponseEntity<>(body, HttpStatus.UNAUTHORIZED);
     }
 
@@ -71,9 +87,7 @@ public class GlobalExceptionHandler {
             body.put("phone", "Este número de teléfono ya está en uso.");
         } else if (ex.getMessage().contains("User email is required for account")) {
             body.put("email", "El correo es obligatorio para crear la cuenta.");
-        }
-
-        else {
+        } else {
             body.put("general", ex.getMessage());
         }
 
@@ -89,11 +103,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleAllExceptions(Exception ex) {
+        log.error("Excepción no controlada capturada en GlobalExceptionHandler: ", ex);
         Map<String, Object> body = new HashMap<>();
         body.put("status", 500);
         body.put("error", "Internal Server Error");
         body.put("message", "Ha ocurrido un error inesperado en el servidor.");
-        ex.printStackTrace(); // En producción usar un Logger real como SLF4J
         return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

@@ -11,6 +11,7 @@ import com.retrofit.backend.service.AuditService;
 import com.retrofit.backend.service.NotificationStreamService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -24,7 +25,9 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -95,19 +98,22 @@ public class AuditServiceImpl implements AuditService {
     @Override
     public void logAction(String action, String module, Long recordId, Object oldData, Object newData) {
         try {
-            // Obtener usuario actual del Token
-            String username = SecurityContextHolder.getContext().getAuthentication().getName();
-            User currentUser = userRepository.findByUsername(username).orElse(null);
+            // Obtener usuario actual del Token de manera segura
+            String username = null;
+            if (SecurityContextHolder.getContext().getAuthentication() != null) {
+                username = SecurityContextHolder.getContext().getAuthentication().getName();
+            }
+            User currentUser = null;
+            if (username != null && !username.isBlank() && !username.equals("anonymousUser")) {
+                currentUser = userRepository.findByUsername(username).orElse(null);
+            }
 
             // Convertir objetos a texto JSON
             String oldJson = oldData != null ? objectMapper.writeValueAsString(oldData) : "null";
             String newJson = newData != null ? objectMapper.writeValueAsString(newData) : "null";
 
-            // Peticion HTTP
-            HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
-            // Ip y navegador
-            String ip = request.getRemoteAddr();
-            String userAgent = request.getHeader("User-Agent");
+            String ip = extractClientIp();
+            String userAgent = extractUserAgent();
 
             AuditLog log = new AuditLog();
             log.setUser(currentUser);
@@ -117,10 +123,9 @@ public class AuditServiceImpl implements AuditService {
             log.setOldData(oldJson);
             log.setNewData(newJson);
             log.setActionDate(LocalDateTime.now());
-            log.setIpAddress(ip != null ? ip : "Desconocida");
-            log.setUserAgent(userAgent != null ? userAgent : "Sistema Interno");
+            log.setIpAddress(ip);
+            log.setUserAgent(userAgent);
 
-            // Guardar
             auditLogRepository.save(log);
             notificationStreamService.publish(NotificationEventDto.builder()
                     .id("LOG-" + log.getId())
@@ -134,12 +139,115 @@ public class AuditServiceImpl implements AuditService {
         }
     }
 
+    @Override
+    public void logAuthenticationEvent(String action, String username, boolean success, String details) {
+        try {
+            User currentUser = null;
+            if (username != null && !username.isBlank()) {
+                currentUser = userRepository.findByUsername(username)
+                        .or(() -> userRepository.findByEmail(username))
+                        .orElse(null);
+            }
+
+            String ip = extractClientIp();
+            String userAgent = extractUserAgent();
+
+            Map<String, Object> dataMap = new HashMap<>();
+            dataMap.put("identificador", username);
+            dataMap.put("resultado", success ? "AUTORIZADO / EXITOSO" : "BLOQUEADO / DENEGADO");
+            dataMap.put("detalle", details);
+            String newJson = objectMapper.writeValueAsString(dataMap);
+
+            AuditLog log = new AuditLog();
+            log.setUser(currentUser);
+            log.setAction(action);
+            log.setAffectedTable("Autenticación");
+            log.setRegisterId(currentUser != null ? currentUser.getId() : null);
+            log.setOldData(null);
+            log.setNewData(newJson);
+            log.setActionDate(LocalDateTime.now());
+            log.setIpAddress(ip);
+            log.setUserAgent(userAgent);
+
+            auditLogRepository.save(log);
+
+            notificationStreamService.publish(NotificationEventDto.builder()
+                    .id("LOG-" + log.getId())
+                    .title(success ? "Acceso al Sistema" : "Alerta de Seguridad (Auth)")
+                    .message(username + ": " + details)
+                    .timestamp(log.getActionDate())
+                    .build());
+        } catch (Exception e) {
+            System.err.println("Error guardando auditoría de autenticación: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public List<AuditLog> getAuditLogsForReport(
+            String search,
+            String module,
+            String action,
+            String date,
+            LocalDate startDate,
+            LocalDate endDate) {
+
+        LocalDateTime startDateTime = null;
+        LocalDateTime endDateTime = null;
+
+        if (date != null && !date.isBlank()) {
+            LocalDate parsedDate = LocalDate.parse(date.trim());
+            startDateTime = parsedDate.atStartOfDay();
+            endDateTime = parsedDate.atTime(23, 59, 59);
+        } else {
+            if (startDate != null) startDateTime = startDate.atStartOfDay();
+            if (endDate != null) endDateTime = endDate.atTime(23, 59, 59);
+        }
+
+        String finalModule = (module == null || module.equalsIgnoreCase("Todos")) ? null : module.trim();
+        String finalAction = (action == null || action.equalsIgnoreCase("Todas")) ? null : action.trim();
+        String finalSearch = (search == null || search.trim().isBlank()) ? null : search.trim();
+
+        return auditLogRepository.findListWithFilters(
+                finalSearch, finalModule, finalAction, startDateTime, endDateTime);
+    }
+
+    private String extractClientIp() {
+        try {
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs != null) {
+                HttpServletRequest request = attrs.getRequest();
+                String remoteAddr = request.getHeader("X-Forwarded-For");
+                if (remoteAddr == null || remoteAddr.isBlank()) {
+                    remoteAddr = request.getRemoteAddr();
+                } else {
+                    remoteAddr = remoteAddr.split(",")[0].trim();
+                }
+                if (remoteAddr != null && !remoteAddr.isBlank()) return remoteAddr;
+            }
+        } catch (Exception ignored) {}
+        return "Desconocida";
+    }
+
+    private String extractUserAgent() {
+        try {
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs != null) {
+                HttpServletRequest request = attrs.getRequest();
+                String ua = request.getHeader("User-Agent");
+                if (ua != null && !ua.isBlank()) return ua;
+            }
+        } catch (Exception ignored) {}
+        return "Sistema Interno";
+    }
+
     private String notificationTitle(String action) {
         return switch (action) {
             case "CREATE" -> "Nuevo registro";
             case "UPDATE" -> "Información actualizada";
             case "DELETE" -> "Registro eliminado";
             case "EXPORT" -> "Reporte generado";
+            case "LOGIN" -> "Inicio de sesión seguro";
+            case "LOGIN_FAILED" -> "Intento no autorizado bloqueado";
             default -> "Actividad registrada";
         };
     }
