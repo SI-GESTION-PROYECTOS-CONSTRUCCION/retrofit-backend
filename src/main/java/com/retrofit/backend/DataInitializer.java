@@ -9,9 +9,13 @@ import com.retrofit.backend.repository.RoleRepository;
 import com.retrofit.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StreamUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -25,6 +29,7 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final AdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JdbcTemplate jdbcTemplate;
 
     @org.springframework.beans.factory.annotation.Value("${app.security.initial-admin-username}")
     private String initialAdminUsername;
@@ -54,6 +59,8 @@ public class DataInitializer implements CommandLineRunner {
 
             createInitialAdminUsers();
             System.out.println("Usuarios administradores iniciales cargados correctamente.");
+
+            loadDemoDataIfNotExists();
         } catch (Exception e) {
             System.err.println("Error al cargar data inicial: " + e.getMessage());
             e.printStackTrace();
@@ -205,6 +212,38 @@ public class DataInitializer implements CommandLineRunner {
                     .build();
             adminRepository.save(admin2);
             System.out.println("Usuario inicial '" + initialSuperAdminUsername + "' creado correctamente.");
+        }
+    }
+
+    private void loadDemoDataIfNotExists() {
+        try {
+            Integer count = 0;
+            try {
+                count = jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM projects WHERE code = 'PRY-VIV-002'",
+                        Integer.class);
+            } catch (Exception ex) {
+                count = 0;
+            }
+
+            if (count != null && count > 0) {
+                System.out.println("Proyecto demo 'PRY-VIV-002' ya existe. Omitiendo ejecución de demo-data.sql.");
+                return;
+            }
+
+            System.out.println("Cargando proyecto demo, recursos y curva S desde demo-data.sql...");
+            ClassPathResource resource = new ClassPathResource("demo-data.sql");
+            if (!resource.exists()) {
+                System.err.println("Archivo demo-data.sql no encontrado en resources.");
+                return;
+            }
+
+            String sql = StreamUtils.copyToString(resource.getInputStream(), StandardCharsets.UTF_8);
+            jdbcTemplate.execute(sql);
+            System.out.println("Proyecto demo 'PRY-VIV-002' y curva S cargados correctamente.");
+        } catch (Exception e) {
+            System.err.println("Error al cargar datos demo desde demo-data.sql: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }
