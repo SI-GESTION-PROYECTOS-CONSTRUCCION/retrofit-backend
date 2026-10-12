@@ -134,7 +134,7 @@ public class DataInitializer implements CommandLineRunner {
         // ASIGNACIÓN A ROLES
         // ==========================================
 
-        // ROL: ADMIN (Tiene acceso a TODO, incluyendo AUDITORÍA)
+        // ROL: ADMIN
         createRoleIfNotExists("ADMIN", "Administrador General del Sistema", Set.of(
                 pCreate, pRead, pUpdate, pDelete,
                 rCreate, rRead, rUpdate, rDelete,
