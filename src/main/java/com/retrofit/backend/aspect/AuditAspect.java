@@ -2,7 +2,6 @@ package com.retrofit.backend.aspect;
 
 import com.retrofit.backend.annotation.AuditChange;
 import com.retrofit.backend.service.AuditService;
-import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
@@ -30,8 +29,7 @@ public class AuditAspect {
                     auditarCambio.module(),
                     id,
                     null,
-                    resultado
-            );
+                    resultado);
 
         } catch (Exception e) {
             System.err.println("Error silencioso en AOP de Auditoría: " + e.getMessage());
@@ -39,7 +37,8 @@ public class AuditAspect {
     }
 
     private Long extraerId(Object objeto) {
-        if (objeto == null) return null;
+        if (objeto == null)
+            return null;
         try {
             Field idField = objeto.getClass().getDeclaredField("id");
             idField.setAccessible(true);

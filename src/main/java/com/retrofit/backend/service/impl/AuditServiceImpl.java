@@ -11,7 +11,6 @@ import com.retrofit.backend.service.AuditService;
 import com.retrofit.backend.service.NotificationStreamService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -40,7 +39,8 @@ public class AuditServiceImpl implements AuditService {
 
     // Leer
     @Override
-    public Page<AuditLogResponseDto> getAuditLogs(int page, int size, String search, String module, String action, String date) {
+    public Page<AuditLogResponseDto> getAuditLogs(int page, int size, String search, String module, String action,
+            String date) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "actionDate"));
 
         // Lógica para fechas
@@ -56,7 +56,8 @@ public class AuditServiceImpl implements AuditService {
         String finalAction = (action == null || action.equalsIgnoreCase("Todas")) ? null : action;
         String finalSearch = (search == null || search.trim().isEmpty()) ? null : search.trim();
 
-        Page<AuditLog> logs = auditLogRepository.findWithFilters(finalSearch, finalModule, finalAction, startDate, endDate, pageable);
+        Page<AuditLog> logs = auditLogRepository.findWithFilters(finalSearch, finalModule, finalAction, startDate,
+                endDate, pageable);
 
         return logs.map(log -> AuditLogResponseDto.builder()
                 .logId("LOG-" + log.getId())
@@ -91,8 +92,6 @@ public class AuditServiceImpl implements AuditService {
                 .alerts(auditLogRepository.countAlerts(accionesCriticas, moduloCritico))
                 .build();
     }
-
-
 
     // Escribir
     @Override
@@ -199,8 +198,10 @@ public class AuditServiceImpl implements AuditService {
             startDateTime = parsedDate.atStartOfDay();
             endDateTime = parsedDate.atTime(23, 59, 59);
         } else {
-            if (startDate != null) startDateTime = startDate.atStartOfDay();
-            if (endDate != null) endDateTime = endDate.atTime(23, 59, 59);
+            if (startDate != null)
+                startDateTime = startDate.atStartOfDay();
+            if (endDate != null)
+                endDateTime = endDate.atTime(23, 59, 59);
         }
 
         String finalModule = (module == null || module.equalsIgnoreCase("Todos")) ? null : module.trim();
@@ -222,9 +223,11 @@ public class AuditServiceImpl implements AuditService {
                 } else {
                     remoteAddr = remoteAddr.split(",")[0].trim();
                 }
-                if (remoteAddr != null && !remoteAddr.isBlank()) return remoteAddr;
+                if (remoteAddr != null && !remoteAddr.isBlank())
+                    return remoteAddr;
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         return "Desconocida";
     }
 
@@ -234,9 +237,11 @@ public class AuditServiceImpl implements AuditService {
             if (attrs != null) {
                 HttpServletRequest request = attrs.getRequest();
                 String ua = request.getHeader("User-Agent");
-                if (ua != null && !ua.isBlank()) return ua;
+                if (ua != null && !ua.isBlank())
+                    return ua;
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         return "Sistema Interno";
     }
 
